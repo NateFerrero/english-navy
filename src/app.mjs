@@ -7,10 +7,12 @@ import { renderSignin } from "./views/signin.mjs";
 import { renderSignup } from "./views/signup.mjs";
 import { renderWelcome } from "./views/welcome.mjs";
 import { renderNotFound } from "./views/notfound.mjs";
+import { applyTheme } from "./theme.mjs";
 
 // Persist the API choice from ?api=... before anything renders, so the whole
 // session (across pushState navigation) keeps using the selected API.
 syncApiFromUrl();
+applyTheme();
 
 registerRoute("/", renderHome);
 registerRoute("/signin", renderSignin);

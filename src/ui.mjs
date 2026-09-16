@@ -52,6 +52,38 @@ export function crest(size = 34) {
   return wrap.firstElementChild;
 }
 
+export function icon(name, size = 20) {
+  const paths = {
+    sun: `
+      <circle cx="12" cy="12" r="4"/>
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42"/>
+    `,
+    moon: `
+      <path d="M21 13.2A7.5 7.5 0 0 1 10.8 3 8.7 8.7 0 1 0 21 13.2Z"/>
+    `,
+    auto: `
+      <path d="M4 12a8 8 0 0 1 13.66-5.66"/>
+      <path d="M17 3v4h-4"/>
+      <path d="M20 12a8 8 0 0 1-13.66 5.66"/>
+      <path d="M7 21v-4h4"/>
+      <path d="M12 8l-3 8M15 16l-3-8M10 13h4"/>
+    `,
+    copy: `
+      <rect x="8" y="8" width="11" height="11" rx="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1"/>
+    `,
+  };
+
+  const wrap = document.createElement("span");
+  wrap.innerHTML = `
+<svg class="icon icon-${name}" viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true" focusable="false">
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+    ${paths[name] || ""}
+  </g>
+</svg>`;
+  return wrap.firstElementChild;
+}
+
 export function isValidEmail(value) {
   // Deliberately simple, front-end-only sanity check.
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value).trim());
