@@ -4,7 +4,7 @@
 // The session token returned by sign-up / login is kept in sessionStorage and
 // sent as a Bearer token on authenticated requests.
 
-const TOKEN_KEY = "session:token";
+import { clearSession, TOKEN_KEY } from "../session.mjs";
 
 function getToken() {
   return sessionStorage.getItem(TOKEN_KEY);
@@ -89,5 +89,9 @@ export const realApi = {
     const err = new Error("Listing users is not supported by the real API.");
     err.code = "UNSUPPORTED";
     throw err;
+  },
+
+  logOut() {
+    clearSession();
   },
 };

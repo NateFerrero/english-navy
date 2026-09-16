@@ -2,6 +2,7 @@
 
 import { el, crest } from "./ui.mjs";
 import { isMock } from "./api/index.mjs";
+import { getSessionEmail } from "./session.mjs";
 
 function navLink(href, label) {
   const active = window.location.pathname === href;
@@ -15,9 +16,11 @@ function navLink(href, label) {
 
 // Render the full page: a header, then the view content inside <main>.
 export function page(content) {
+  const email = getSessionEmail();
   const nav = el("nav", { class: "nav" }, [
     navLink("/", "Home"),
-    navLink("/signup", "Sign up"),
+    email ? el("span", { class: "nav-user", text: email }) : navLink("/signin", "Sign in"),
+    email ? null : navLink("/signup", "Sign up"),
     isMock() ? el("span", { class: "badge-mock", text: "Mock API" }) : null,
   ]);
 

@@ -4,7 +4,7 @@ import { navigate } from "../router.mjs";
 import { getApi } from "../api/index.mjs";
 import { setSessionEmail } from "../session.mjs";
 
-export function renderSignup(outlet) {
+export function renderSignin(outlet) {
   const emailError = el("div", { class: "error" });
   const passwordError = el("div", { class: "error" });
   const formAlert = el("div");
@@ -22,23 +22,21 @@ export function renderSignup(outlet) {
     id: "password",
     name: "password",
     type: "password",
-    autocomplete: "new-password",
-    placeholder: "At least 8 characters",
+    autocomplete: "current-password",
+    placeholder: "Your password",
     required: "",
   });
 
   const submit = el("button", {
     type: "submit",
     class: "btn btn-primary",
-    text: "Create account",
+    text: "Sign in",
   });
 
   function setAlert(kind, message) {
     clear(formAlert);
     if (message) {
-      formAlert.append(
-        el("div", { class: `alert alert-${kind}`, text: message })
-      );
+      formAlert.append(el("div", { class: `alert alert-${kind}`, text: message }));
     }
   }
 
@@ -51,8 +49,8 @@ export function renderSignup(outlet) {
       emailError.textContent = "Enter a valid email address.";
       ok = false;
     }
-    if (passwordInput.value.length < 8) {
-      passwordError.textContent = "Password must be at least 8 characters.";
+    if (!passwordInput.value) {
+      passwordError.textContent = "Enter your password.";
       ok = false;
     }
     return ok;
@@ -64,49 +62,44 @@ export function renderSignup(outlet) {
     if (!validate()) return;
 
     submit.disabled = true;
-    submit.textContent = "Creating account…";
+    submit.textContent = "Signing in...";
 
     try {
-      const user = await getApi().signUp({
+      const user = await getApi().logIn({
         email: emailInput.value,
         password: passwordInput.value,
       });
-      // Persist just enough to greet the user on the welcome screen.
       setSessionEmail(user.email);
-      navigate("/welcome");
+      navigate("/");
     } catch (err) {
-      setAlert("error", err.message || "Sign up failed. Please try again.");
+      setAlert("error", err.message || "Sign in failed. Please try again.");
       submit.disabled = false;
-      submit.textContent = "Create account";
+      submit.textContent = "Sign in";
     }
   }
 
-  const form = el(
-    "form",
-    { novalidate: "", onsubmit: onSubmit },
-    [
-      formAlert,
-      el("div", { class: "field" }, [
-        el("label", { for: "email", text: "Email address" }),
-        emailInput,
-        emailError,
-      ]),
-      el("div", { class: "field" }, [
-        el("label", { for: "password", text: "Password" }),
-        passwordInput,
-        passwordError,
-      ]),
-      submit,
-    ]
-  );
+  const form = el("form", { novalidate: "", onsubmit: onSubmit }, [
+    formAlert,
+    el("div", { class: "field" }, [
+      el("label", { for: "email", text: "Email address" }),
+      emailInput,
+      emailError,
+    ]),
+    el("div", { class: "field" }, [
+      el("label", { for: "password", text: "Password" }),
+      passwordInput,
+      passwordError,
+    ]),
+    submit,
+  ]);
 
   const card = el("div", { class: "card" }, [
-    el("h2", { text: "Create your account" }),
-    el("p", { class: "subtitle", text: "Join The English Navy in seconds." }),
+    el("h2", { text: "Sign in" }),
+    el("p", { class: "subtitle", text: "Return to your post aboard The English Navy." }),
     form,
     el("p", { class: "form-foot" }, [
-      "Already enlisted? ",
-      el("a", { href: "/signin", "data-link": "", text: "Sign in" }),
+      "Need to enlist? ",
+      el("a", { href: "/signup", "data-link": "", text: "Create an account" }),
     ]),
   ]);
 

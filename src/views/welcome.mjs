@@ -1,13 +1,14 @@
 import { el, clear, crest } from "../ui.mjs";
 import { page } from "../layout.mjs";
 import { navigate } from "../router.mjs";
+import { getSessionEmail } from "../session.mjs";
 
 export function renderWelcome(outlet) {
-  const email = sessionStorage.getItem("session:email");
+  const email = getSessionEmail();
 
-  // If someone lands here directly without signing up, send them to signup.
+  // If someone lands here directly without signing up, send them to sign in.
   if (!email) {
-    navigate("/signup", { replace: true });
+    navigate("/signin", { replace: true });
     return;
   }
 
