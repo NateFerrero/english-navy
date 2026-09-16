@@ -21,9 +21,9 @@ export function renderHome(outlet) {
     isMock()
       ? "Running against the in-browser mock API for this session."
       : el("span", {}, [
-          "No backend yet — open ",
+          "Connected to the live API. Add ",
           el("code", { text: "?api=mock" }),
-          " to try the mock sign-up flow.",
+          " to use the in-browser mock instead.",
         ]),
   ]);
 
