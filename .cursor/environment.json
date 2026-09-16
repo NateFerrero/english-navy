@@ -1,6 +1,6 @@
 {
   "name": "english-navy",
-  "install": "node --version",
+  "install": "npm install",
   "terminals": [
     {
       "name": "dev-server",

@@ -49,10 +49,49 @@ async function send(res, filePath, status = 200) {
   res.end(body);
 }
 
+// Route /api/* to the same serverless handler modules Vercel would run, so the
+// full stack works locally. Each handler is `export default (req, res) => ...`.
+const apiModuleCache = new Map();
+
+async function handleApi(req, res, pathname) {
+  const name = pathname.slice("/api/".length).replace(/\/+$/, "");
+  // Only allow simple, single-segment route names (matches api/<name>.js).
+  if (!/^[a-z0-9_-]+$/i.test(name)) {
+    res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ error: "Not found" }));
+    return;
+  }
+
+  let handler = apiModuleCache.get(name);
+  if (!handler) {
+    const modUrl = new URL(`./api/${name}.js`, import.meta.url);
+    try {
+      const mod = await import(modUrl.href);
+      handler = mod.default;
+    } catch {
+      res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ error: `No API route '/api/${name}'` }));
+      return;
+    }
+    apiModuleCache.set(name, handler);
+  }
+
+  await handler(req, res);
+}
+
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://${req.headers.host}`);
     let pathname = decodeURIComponent(url.pathname);
+
+    // Expose parsed query to handlers (parity with Vercel's req.query).
+    req.query = Object.fromEntries(url.searchParams.entries());
+
+    if (pathname.startsWith("/api/")) {
+      await handleApi(req, res, pathname);
+      return;
+    }
+
     if (pathname === "/") pathname = "/index.html";
 
     // 1) Serve a real file when one exists.
