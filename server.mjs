@@ -13,9 +13,15 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
-const STATIC_ALLOWLIST = ["/index.html", "/styles.css", "/src/"];
-const STATIC_FILE_ALLOWLIST = new Set([resolve(ROOT, "index.html"), resolve(ROOT, "styles.css")]);
-const STATIC_DIR_ALLOWLIST = [resolve(ROOT, "src")];
+const STATIC_ALLOWLIST = ["/index.html", "/styles.css", "/manifest.webmanifest", "/sw.mjs", "/offline.html", "/icons/", "/src/"];
+const STATIC_FILE_ALLOWLIST = new Set([
+  resolve(ROOT, "index.html"),
+  resolve(ROOT, "styles.css"),
+  resolve(ROOT, "manifest.webmanifest"),
+  resolve(ROOT, "sw.mjs"),
+  resolve(ROOT, "offline.html"),
+]);
+const STATIC_DIR_ALLOWLIST = [resolve(ROOT, "icons"), resolve(ROOT, "src")];
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -23,6 +29,7 @@ const MIME = {
   ".mjs": "text/javascript; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".png": "image/png",

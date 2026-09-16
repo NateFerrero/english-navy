@@ -7,7 +7,8 @@
   "scripts": {
     "build": "node build.mjs",
     "start": "node server.mjs",
-    "dev": "node server.mjs"
+    "dev": "node server.mjs",
+    "generate:icons": "node scripts/generate-icons.mjs"
   },
   "engines": {
     "node": ">=18"
@@ -15,5 +16,8 @@
   "license": "MIT",
   "dependencies": {
     "@libsql/client": "^0.18.0"
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2"
   }
 }
