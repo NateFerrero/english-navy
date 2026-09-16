@@ -15,7 +15,7 @@ The English Navy — a small web app for user sign-up.
 - **No external dependencies or web fonts** — everything is local (system font
   stack, inline SVG crest).
 - **PushState routing** (History API) — clean URLs, no `#` hash.
-- **Mock API toggle**: open the app with `?api=mock`. That persists
+- **Local mock API toggle**: on localhost, open the app with `?api=mock`. That persists
   `api = "mock"` in `sessionStorage`, so the mock stays active across navigation
   and reloads for the whole session.
 - **Sign up** with an invite code, email address, and password.
@@ -26,6 +26,7 @@ Requires Node.js.
 
 ```bash
 npm install   # installs @libsql/client (backend only)
+npm run build # writes the deployable static frontend to dist/
 npm start     # or: node server.mjs
 ```
 
@@ -45,7 +46,7 @@ Set `PORT` to change the port (defaults to `3000`).
 index.html          App shell; loads src/app.mjs as a module
 styles.css          Styling (no external fonts)
 server.mjs          Static server + local /api router (dev only)
-vercel.json         Vercel config (30s maxDuration per route, SPA rewrites)
+vercel.json         Vercel config (build output, headers, functions, SPA rewrites)
 .env.example        Backend environment variables (Turso, auth)
 src/                FRONT END (zero dependencies)
   app.mjs           Bootstrap: registers routes, starts router
@@ -72,11 +73,11 @@ lib/                BACKEND shared modules
 
 ## How the mock toggle works
 
-`src/api/index.mjs` reads `?api=` on load and writes it to `sessionStorage`.
+`src/api/index.mjs` reads `?api=mock` on localhost and writes it to `sessionStorage`.
 Every API call then routes to the mock or the real backend API based on that
 stored value, so navigating with pushState — which drops the query string —
 keeps the choice for the rest of the session. Use `?api=mock` for the in-browser
-mock; the default (or `?api=real`) calls the backend under `/api`.
+mock during local development; production always calls the backend under `/api`.
 
 ## Backend API (Vercel + Turso)
 
@@ -89,8 +90,9 @@ Routes:
 | ------ | -------------- | --------------------------------------------------- |
 | GET    | `/api/health`  | Liveness + active DB provider                       |
 | POST   | `/api/signup`       | Redeem invite code + create account + provision the user's own database |
-| POST   | `/api/login`        | Authenticate, return a session token                                  |
-| GET    | `/api/me`           | Current account (Bearer token)                                        |
+| POST   | `/api/login`        | Authenticate and set an HttpOnly session cookie                       |
+| GET    | `/api/me`           | Current account                                                       |
+| DELETE | `/api/me`           | Clear the session cookie                                              |
 | GET    | `/api/profile`      | Read the user's **secondary** database                                |
 | PUT    | `/api/profile`      | Write the user's **secondary** database                               |
 | GET    | `/api/invite-codes` | List invite codes created by the current user                         |
@@ -120,7 +122,9 @@ The same `@libsql/client` talks to both, selected by `DB_PROVIDER`:
 See [`.env.example`](.env.example). For production on Vercel, set:
 `TURSO_API_TOKEN`, `TURSO_ORG`, `TURSO_GROUP`, `TURSO_PRIMARY_DB_URL`,
 `TURSO_PRIMARY_DB_AUTH_TOKEN`, and `AUTH_SECRET`. `TURSO_GROUP` must match an
-existing Turso group.
+existing Turso group. `AUTH_SECRET` must be at least 32 characters outside
+local development. Set `ALLOWED_ORIGINS` only when non-same-origin browser
+clients need API access.
 
 Locally, `npm start` runs everything (the dev server routes `/api/*` to the same
 handler modules Vercel would run), defaulting to the `local` provider.

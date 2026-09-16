@@ -5,6 +5,7 @@ import {
   withErrors,
   methodNotAllowed,
   httpError,
+  checkRateLimit,
 } from "../lib/http.mjs";
 import { requireUser } from "../lib/session.mjs";
 import {
@@ -33,6 +34,7 @@ export default withErrors(async function handler(req, res) {
   }
 
   if (req.method === "POST") {
+    checkRateLimit(req, "invite-codes", { limit: 30, windowMs: 15 * 60 * 1000 });
     const body = await readJsonBody(req);
     const count = Number(body.count ?? 1);
     if (!Number.isInteger(count) || count < 1 || count > MAX_INVITE_CODES_PER_USER) {

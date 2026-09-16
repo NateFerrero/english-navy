@@ -103,7 +103,6 @@ function publicInviteCode(invite) {
     code: invite.code,
     createdAt: invite.createdAt,
     claimedAt: invite.claimedAt || null,
-    claimedByUserId: invite.claimedByUserId || null,
   };
 }
 
@@ -296,7 +295,6 @@ export const mockApi = {
         id: entry.id,
         type: entry.type,
         createdAt: entry.createdAt,
-        actorUserId: entry.actorUserId || null,
         actorEmail: users.find((item) => item.id === entry.actorUserId)?.email || null,
         inviteCode: entry.inviteCode || null,
         metadata: entry.metadata || null,

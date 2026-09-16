@@ -2,7 +2,7 @@ import { el } from "../ui.mjs";
 import { page } from "../layout.mjs";
 import { navigate } from "../router.mjs";
 import { clear } from "../ui.mjs";
-import { getApi, isMock } from "../api/index.mjs";
+import { getApi, isMock, isMockAvailable } from "../api/index.mjs";
 import { clearSession, getSessionEmail } from "../session.mjs";
 
 function renderSignedInHome(email) {
@@ -30,8 +30,8 @@ function renderSignedInHome(email) {
         class: "btn btn-ghost",
         type: "button",
         text: "Sign out",
-        onclick: () => {
-          getApi().logOut?.();
+        onclick: async () => {
+          await getApi().logOut?.();
           clearSession();
           navigate("/", { replace: true });
         },
@@ -69,15 +69,17 @@ export function renderHome(outlet) {
     ]),
   ]);
 
-  const note = el("p", { class: "mock-note" }, [
-    isMock()
-      ? "Running against the in-browser mock API for this session."
-      : el("span", {}, [
-          "Connected to the live API. Add ",
-          el("code", { text: "?api=mock" }),
-          " to use the in-browser mock instead.",
-        ]),
-  ]);
+  const note = isMockAvailable()
+    ? el("p", { class: "mock-note" }, [
+        isMock()
+          ? "Running against the in-browser mock API for this session."
+          : el("span", {}, [
+              "Connected to the live API. Add ",
+              el("code", { text: "?api=mock" }),
+              " to use the in-browser mock instead.",
+            ]),
+      ])
+    : null;
 
   clear(outlet);
   outlet.append(page(el("div", {}, [hero, note])));
