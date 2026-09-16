@@ -11,6 +11,7 @@ const RANKED_NAV_ITEMS = [
   { href: "/profile", label: "Profile" },
   { href: "/realms", label: "Realms" },
   { href: "/contacts", label: "Contacts" },
+  { href: "/messages", label: "Messages" },
   { href: "/settings", label: "Settings" },
   { href: "/log", label: "Log" },
 ];
