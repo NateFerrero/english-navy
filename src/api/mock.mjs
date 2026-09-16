@@ -7,6 +7,10 @@
 import { clearSession, TOKEN_KEY } from "../session.mjs";
 
 const USERS_KEY = "mock:users";
+const INVITE_CODES_KEY = "mock:invite-codes";
+const MAX_INVITE_CODES_PER_USER = 100;
+const DEMO_INVITE_CODE = "DEMO-CODE-0001";
+const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -28,6 +32,60 @@ function publicUser(user) {
   return { id: user.id, email: user.email, createdAt: user.createdAt };
 }
 
+function normalizeInviteCode(code) {
+  return String(code || "").trim().toUpperCase();
+}
+
+function loadInviteCodes() {
+  let codes;
+  try {
+    codes = JSON.parse(sessionStorage.getItem(INVITE_CODES_KEY)) || [];
+  } catch {
+    codes = [];
+  }
+  if (!codes.some((invite) => invite.code === DEMO_INVITE_CODE)) {
+    codes.unshift({
+      code: DEMO_INVITE_CODE,
+      createdByUserId: "mock_system",
+      createdAt: new Date().toISOString(),
+      claimedByUserId: null,
+      claimedAt: null,
+    });
+    saveInviteCodes(codes);
+  }
+  return codes;
+}
+
+function saveInviteCodes(codes) {
+  sessionStorage.setItem(INVITE_CODES_KEY, JSON.stringify(codes));
+}
+
+function publicInviteCode(invite) {
+  return {
+    code: invite.code,
+    createdAt: invite.createdAt,
+    claimedAt: invite.claimedAt || null,
+    claimedByUserId: invite.claimedByUserId || null,
+  };
+}
+
+function currentUserId() {
+  const token = sessionStorage.getItem(TOKEN_KEY);
+  return token?.startsWith("mock:") ? token.slice("mock:".length) : "";
+}
+
+function randomInviteCode() {
+  const parts = [];
+  for (let group = 0; group < 3; group++) {
+    let part = "";
+    for (let i = 0; i < 4; i++) {
+      part += INVITE_CODE_ALPHABET[Math.floor(Math.random() * INVITE_CODE_ALPHABET.length)];
+    }
+    parts.push(part);
+  }
+  return parts.join("-");
+}
+
 // Not cryptographic — this is a front-end-only mock. Never do this for real.
 function fauxHash(password) {
   let h = 0;
@@ -41,15 +99,31 @@ function fauxHash(password) {
 export const mockApi = {
   name: "mock",
 
-  async signUp({ email, password }) {
+  async signUp({ email, password, inviteCode }) {
     await delay(450);
 
     const normalized = String(email).trim().toLowerCase();
+    const normalizedInviteCode = normalizeInviteCode(inviteCode);
     const users = loadUsers();
+    const inviteCodes = loadInviteCodes();
 
     if (users.some((u) => u.email === normalized)) {
       const err = new Error("An account with that email already exists.");
       err.code = "EMAIL_TAKEN";
+      throw err;
+    }
+    if (!normalizedInviteCode) {
+      const err = new Error("Enter an invite code.");
+      err.code = "INVITE_CODE_REQUIRED";
+      throw err;
+    }
+
+    const invite = inviteCodes.find(
+      (item) => item.code === normalizedInviteCode && !item.claimedByUserId
+    );
+    if (!invite) {
+      const err = new Error("Enter a valid unused invite code.");
+      err.code = "INVALID_INVITE_CODE";
       throw err;
     }
 
@@ -58,9 +132,13 @@ export const mockApi = {
       email: normalized,
       passwordHash: fauxHash(password),
       createdAt: new Date().toISOString(),
+      invitedByUserId: invite.createdByUserId,
     };
+    invite.claimedByUserId = user.id;
+    invite.claimedAt = new Date().toISOString();
     users.push(user);
     saveUsers(users);
+    saveInviteCodes(inviteCodes);
     sessionStorage.setItem(TOKEN_KEY, `mock:${user.id}`);
 
     return publicUser(user);
@@ -108,5 +186,62 @@ export const mockApi = {
 
   logOut() {
     clearSession();
+  },
+
+  async listInviteCodes() {
+    await delay(100);
+    const userId = currentUserId();
+    const inviteCodes = loadInviteCodes().filter((invite) => invite.createdByUserId === userId);
+    return {
+      inviteCodes: inviteCodes.map(publicInviteCode),
+      remaining: Math.max(0, MAX_INVITE_CODES_PER_USER - inviteCodes.length),
+    };
+  },
+
+  async createInviteCodes({ count = 1 } = {}) {
+    await delay(200);
+    const userId = currentUserId();
+    if (!userId) {
+      const err = new Error("Sign in before creating invite codes.");
+      err.code = "UNAUTHORIZED";
+      throw err;
+    }
+
+    const amount = Number(count);
+    if (!Number.isInteger(amount) || amount < 1 || amount > MAX_INVITE_CODES_PER_USER) {
+      const err = new Error("Request between 1 and 100 invite codes.");
+      err.code = "INVALID_INVITE_COUNT";
+      throw err;
+    }
+
+    const inviteCodes = loadInviteCodes();
+    const createdCount = inviteCodes.filter((invite) => invite.createdByUserId === userId).length;
+    const remaining = MAX_INVITE_CODES_PER_USER - createdCount;
+    if (amount > remaining) {
+      const err = new Error(`You can create ${remaining} more invite code${remaining === 1 ? "" : "s"}.`);
+      err.code = "INVITE_LIMIT_REACHED";
+      throw err;
+    }
+
+    const created = [];
+    while (created.length < amount) {
+      const code = randomInviteCode();
+      if (inviteCodes.some((invite) => invite.code === code)) continue;
+      const invite = {
+        code,
+        createdByUserId: userId,
+        createdAt: new Date().toISOString(),
+        claimedByUserId: null,
+        claimedAt: null,
+      };
+      inviteCodes.push(invite);
+      created.push(invite);
+    }
+
+    saveInviteCodes(inviteCodes);
+    return {
+      inviteCodes: created.map(publicInviteCode),
+      remaining: remaining - created.length,
+    };
   },
 };

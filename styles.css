@@ -302,6 +302,65 @@ main {
   margin: 0 auto 12px;
 }
 
+.invite-panel {
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  margin: 20px 0;
+  padding: 18px 0;
+  text-align: left;
+}
+
+.invite-panel h3 {
+  color: var(--navy);
+  margin: 0 0 4px;
+}
+
+.invite-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 14px 0;
+}
+
+.invite-controls label {
+  color: var(--navy-2);
+  font-weight: 600;
+}
+
+.invite-controls input {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 1rem;
+  padding: 10px 12px;
+}
+
+.invite-list {
+  list-style: none;
+  margin: 12px 0 0;
+  max-height: 180px;
+  overflow: auto;
+  padding: 0;
+}
+
+.invite-list li {
+  border-top: 1px solid var(--line);
+  color: var(--navy-2);
+  padding: 8px 0;
+}
+
+.invite-list code {
+  background: #ece7d6;
+  border-radius: 6px;
+  color: var(--ink);
+  font-weight: 700;
+  padding: 2px 6px;
+}
+
+.invite-status {
+  min-height: 1.2em;
+}
+
 .muted {
   color: var(--navy-2);
   font-size: 0.92rem;
