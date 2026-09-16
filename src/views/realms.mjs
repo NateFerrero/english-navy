@@ -200,9 +200,15 @@ export function renderRealms(outlet) {
 
   function render() {
     const alert = el("div");
+    const invitations = pendingInvitations();
     setAlert(alert, state.error ? "error" : "ok", state.error || state.success);
     clear(body);
-    body.append(alert, createRealmForm(), pendingInvitations(), el("section", { class: "panel" }, [el("h3", { text: "Your Realms" }), realmsList()]));
+    body.append(
+      alert,
+      createRealmForm(),
+      ...(invitations ? [invitations] : []),
+      el("section", { class: "panel" }, [el("h3", { text: "Your Realms" }), realmsList()])
+    );
   }
 
   clear(outlet);
