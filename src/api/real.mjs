@@ -86,6 +86,42 @@ export const realApi = {
     return request("/api/profile?pageRank=reset", { method: "POST", auth: true });
   },
 
+  async listContacts() {
+    return request("/api/contacts", { auth: true });
+  },
+
+  async addContact({ email }) {
+    return request("/api/contacts", { method: "POST", auth: true, body: { email } });
+  },
+
+  async listRealms() {
+    return request("/api/realms", { auth: true });
+  },
+
+  async createRealm({ title, description }) {
+    return request("/api/realms", { method: "POST", auth: true, body: { title, description } });
+  },
+
+  async inviteToRealm({ realmId, email }) {
+    return request("/api/realms?action=invite", {
+      method: "POST",
+      auth: true,
+      body: { realmId, email },
+    });
+  },
+
+  async listRealmNotifications() {
+    return request("/api/realms?action=notifications", { auth: true });
+  },
+
+  async respondToRealmInvitation({ invitationId, response }) {
+    return request("/api/realms?action=respond", {
+      method: "POST",
+      auth: true,
+      body: { invitationId, response },
+    });
+  },
+
   async changePassword({ currentPassword, newPassword }) {
     return request("/api/password", {
       method: "PUT",

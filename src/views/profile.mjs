@@ -30,7 +30,7 @@ export function renderProfile(outlet) {
   const body = el("div", { class: "profile-card-body" });
   const card = el("div", { class: "card" }, [
     el("h2", { text: "Profile" }),
-    el("p", { class: "subtitle", text: "Set the name shown on your account." }),
+    el("p", { class: "subtitle", text: "Your account information." }),
     body,
   ]);
 

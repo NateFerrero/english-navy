@@ -1,6 +1,6 @@
 // Shared page chrome (header + nav) wrapped around each view's content.
 
-import { el, crest, icon } from "./ui.mjs";
+import { el, clear, crest, icon } from "./ui.mjs";
 import { getApi, isMock } from "./api/index.mjs";
 import { getSessionEmail } from "./session.mjs";
 import { cycleTheme, onThemeChange } from "./theme.mjs";
@@ -9,6 +9,8 @@ const PAGE_RANK_CACHE_KEY = "nav:page-ranks";
 const RANKED_NAV_ITEMS = [
   { href: "/", label: "Home" },
   { href: "/profile", label: "Profile" },
+  { href: "/realms", label: "Realms" },
+  { href: "/contacts", label: "Contacts" },
   { href: "/settings", label: "Settings" },
   { href: "/log", label: "Log" },
 ];
@@ -202,6 +204,114 @@ function themeButton() {
   return button;
 }
 
+function invitationSummary(invitation) {
+  const title = invitation.realmTitle || "Untitled Realm";
+  const inviter = invitation.inviterEmail ? ` from ${invitation.inviterEmail}` : "";
+  return `${title}${inviter}`;
+}
+
+function notificationsButton() {
+  const menu = el("div", { class: "notifications-menu", role: "menu", hidden: "" });
+  const badge = el("span", { class: "notifications-badge", hidden: "", text: "0" });
+  const button = el(
+    "button",
+    {
+      class: "notifications-button",
+      type: "button",
+      "aria-label": "Realm invitations",
+      "aria-expanded": "false",
+      onclick: (event) => {
+        event.stopPropagation();
+        const expanded = button.getAttribute("aria-expanded") === "true";
+        button.setAttribute("aria-expanded", expanded ? "false" : "true");
+        menu.hidden = expanded;
+        if (!expanded) {
+          loadNotifications();
+          setTimeout(() => {
+            document.addEventListener(
+              "click",
+              () => {
+                button.setAttribute("aria-expanded", "false");
+                menu.hidden = true;
+              },
+              { once: true }
+            );
+          });
+        }
+      },
+    },
+    [icon("bell", 18), badge]
+  );
+
+  async function respond(invitation, response) {
+    try {
+      await getApi().respondToRealmInvitation({ invitationId: invitation.id, response });
+      window.dispatchEvent(new CustomEvent("realm-invitations:changed"));
+      await loadNotifications();
+    } catch (err) {
+      renderMenu([], err.message || "Could not update the invitation.");
+    }
+  }
+
+  function renderMenu(invitations, error = "") {
+    clear(menu);
+    menu.append(el("h3", { text: "Realm invitations" }));
+    if (error) {
+      menu.append(el("p", { class: "notifications-error", text: error }));
+      return;
+    }
+    if (!invitations.length) {
+      menu.append(el("p", { class: "muted", text: "No pending invitations." }));
+      return;
+    }
+    menu.append(
+      el(
+        "ul",
+        { class: "notifications-list" },
+        invitations.map((invitation) =>
+          el("li", {}, [
+            el("strong", { text: invitationSummary(invitation) }),
+            invitation.realmDescription ? el("span", { text: invitation.realmDescription }) : null,
+            el("div", { class: "notification-actions" }, [
+              el("button", {
+                type: "button",
+                class: "btn btn-small btn-primary",
+                text: "Accept",
+                onclick: () => respond(invitation, "accept"),
+              }),
+              el("button", {
+                type: "button",
+                class: "btn btn-small btn-ghost",
+                text: "Decline",
+                onclick: () => respond(invitation, "decline"),
+              }),
+            ]),
+          ])
+        )
+      )
+    );
+  }
+
+  async function loadNotifications() {
+    try {
+      const data = await getApi().listRealmNotifications();
+      const count = Number(data.count ?? data.invitations?.length ?? 0);
+      badge.textContent = String(count);
+      badge.hidden = count === 0;
+      button.classList.toggle("has-notifications", count > 0);
+      renderMenu(data.invitations || []);
+    } catch {
+      badge.hidden = true;
+      renderMenu([]);
+    }
+  }
+
+  menu.addEventListener("click", (event) => event.stopPropagation());
+  window.addEventListener("realm-invitations:changed", loadNotifications);
+  loadNotifications();
+  return el("span", { class: "notifications" }, [button, menu]);
+}
+
 // Render the full page: a header, then the view content inside <main>.
 export function page(content) {
   const email = getSessionEmail();
@@ -212,6 +322,7 @@ export function page(content) {
     email ? null : navLink("/signup", "Sign up"),
     isMock() ? el("span", { class: "badge-mock", text: "Mock API" }) : null,
     themeButton(),
+    email ? notificationsButton() : null,
   ]);
 
   const header = el("header", { class: "site-header" }, [
