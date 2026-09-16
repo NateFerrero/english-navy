@@ -20,7 +20,7 @@ import {
 } from "../lib/userdb.mjs";
 import { publicUser, recordActivityLog } from "../lib/primary.mjs";
 
-const PAGE_RANK_PATHS = new Set(["/", "/profile", "/settings", "/log"]);
+const PAGE_RANK_PATHS = new Set(["/", "/profile", "/settings", "/log", "/realms", "/contacts"]);
 
 function pageRankAction(req) {
   const url = new URL(req.url || "/api/profile", "http://localhost");

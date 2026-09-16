@@ -12,6 +12,7 @@ import {
 import { hashPassword, signToken } from "../lib/auth.mjs";
 import {
   ensurePrimarySchema,
+  addContactForUser,
   findUserByEmail,
   insertUser,
   publicUser,
@@ -94,6 +95,7 @@ export default withErrors(async function handler(req, res) {
 
     // 3) Initialize the secondary database schema for this user.
     await seedUserDatabase(user);
+    await addContactForUser(invite.created_by_user_id, email, "invite_code");
     await recordActivityLog({
       ownerUserId: invite.created_by_user_id,
       actorUserId: id,
