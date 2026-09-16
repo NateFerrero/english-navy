@@ -70,6 +70,22 @@ export const realApi = {
     return request("/api/profile", { method: "PUT", auth: true, body: updates });
   },
 
+  async listPageRanks() {
+    return request("/api/profile?pageRank=list", { auth: true });
+  },
+
+  async recordPageVisit(path) {
+    return request("/api/profile?pageRank=record", {
+      method: "POST",
+      auth: true,
+      body: { path },
+    });
+  },
+
+  async resetPageRanks() {
+    return request("/api/profile?pageRank=reset", { method: "POST", auth: true });
+  },
+
   async changePassword({ currentPassword, newPassword }) {
     return request("/api/password", {
       method: "PUT",

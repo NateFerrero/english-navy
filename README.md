@@ -95,6 +95,7 @@ Routes:
 | DELETE | `/api/me`           | Clear the session cookie                                              |
 | GET    | `/api/profile`      | Read the user's **secondary** database                                |
 | PUT    | `/api/profile`      | Write the user's **secondary** database                               |
+| POST   | `/api/profile?pageRank=record/reset` | Record or reset signed-in top-menu page ranks in the user's **secondary** database |
 | GET    | `/api/invite-codes` | List invite codes created by the current user                         |
 | POST   | `/api/invite-codes` | Create 1-100 invite codes, up to 100 total per user                   |
 

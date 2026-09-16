@@ -127,6 +127,7 @@ body {
 .brand {
   display: flex;
   align-items: center;
+  flex: none;
   gap: 12px;
   color: var(--header-text);
   text-decoration: none;
@@ -145,10 +146,27 @@ body {
 }
 
 .nav {
+  flex: 1 1 auto;
   margin-left: auto;
+  min-width: 0;
   display: flex;
   gap: 8px;
   align-items: center;
+}
+
+.nav-main {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.nav-main-link[hidden],
+.nav-overflow[hidden],
+.nav-overflow-menu[hidden] {
+  display: none;
 }
 
 .nav a {
@@ -169,7 +187,57 @@ body {
   color: var(--ink);
 }
 
+.nav-overflow {
+  flex: none;
+  position: relative;
+}
+
+.nav-overflow-button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  color: var(--header-text);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 700;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 10px;
+}
+
+.nav-overflow-button:hover,
+.nav-overflow-button:focus,
+.nav-overflow-button.active {
+  background: var(--nav-hover);
+}
+
+.nav-overflow-menu {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+  min-width: 150px;
+  padding: 6px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 10;
+}
+
+.nav-overflow-menu a {
+  color: var(--navy);
+  display: block;
+}
+
+.nav-overflow-menu a:hover,
+.nav-overflow-menu a:focus {
+  background: var(--code-bg);
+}
+
 .nav-user {
+  flex: 0 1 auto;
   color: var(--header-text);
   font-size: 0.88rem;
   font-weight: 700;
@@ -464,6 +532,11 @@ main {
 .settings-section h3 {
   color: var(--navy);
   margin: 0 0 14px;
+}
+
+.settings-reset-button {
+  margin-top: 12px;
+  width: 100%;
 }
 
 .log-card {

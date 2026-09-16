@@ -1,5 +1,5 @@
 import { el, clear } from "../ui.mjs";
-import { page } from "../layout.mjs";
+import { clearCachedPageRanks, page } from "../layout.mjs";
 import { navigate } from "../router.mjs";
 import { getApi } from "../api/index.mjs";
 import { getSessionEmail } from "../session.mjs";
@@ -36,6 +36,7 @@ export function renderSettings(outlet) {
 
   const timezoneAlert = el("div");
   const passwordAlert = el("div");
+  const pageRankAlert = el("div");
   const timezoneSelect = el("select", {
     id: "default-timezone",
     name: "default-timezone",
@@ -71,6 +72,12 @@ export function renderSettings(outlet) {
     type: "submit",
     class: "btn btn-primary",
     text: "Change password",
+  });
+  const pageRankReset = el("button", {
+    type: "button",
+    class: "btn btn-ghost settings-reset-button",
+    text: "Reset page rank",
+    onclick: onPageRankReset,
   });
 
   async function loadSettings() {
@@ -133,6 +140,23 @@ export function renderSettings(outlet) {
     }
   }
 
+  async function onPageRankReset() {
+    setAlert(pageRankAlert, null, "");
+    pageRankReset.disabled = true;
+    pageRankReset.textContent = "Resetting...";
+
+    try {
+      await getApi().resetPageRanks();
+      clearCachedPageRanks();
+      setAlert(pageRankAlert, "ok", "Page rank reset.");
+    } catch (err) {
+      setAlert(pageRankAlert, "error", err.message || "Could not reset page rank.");
+    } finally {
+      pageRankReset.disabled = false;
+      pageRankReset.textContent = "Reset page rank";
+    }
+  }
+
   const timezoneForm = el("form", { novalidate: "", onsubmit: onTimezoneSubmit }, [
     timezoneAlert,
     el("div", { class: "field" }, [
@@ -165,6 +189,15 @@ export function renderSettings(outlet) {
     el("section", { class: "settings-section" }, [
       el("h3", { text: "Timezone" }),
       timezoneForm,
+    ]),
+    el("section", { class: "settings-section" }, [
+      el("h3", { text: "Page rank" }),
+      el("p", {
+        class: "muted",
+        text: "Clear the visit counts used to order the signed-in top menu.",
+      }),
+      pageRankAlert,
+      pageRankReset,
     ]),
     el("section", { class: "settings-section" }, [
       el("h3", { text: "Password" }),
