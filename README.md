@@ -116,7 +116,8 @@ The same `@libsql/client` talks to both, selected by `DB_PROVIDER`:
 
 See [`.env.example`](.env.example). For production on Vercel, set:
 `TURSO_API_TOKEN`, `TURSO_ORG`, `TURSO_GROUP`, `TURSO_PRIMARY_DB_URL`,
-`TURSO_PRIMARY_DB_AUTH_TOKEN`, and `AUTH_SECRET`.
+`TURSO_PRIMARY_DB_AUTH_TOKEN`, and `AUTH_SECRET`. `TURSO_GROUP` must match an
+existing Turso group.
 
 Locally, `npm start` runs everything (the dev server routes `/api/*` to the same
 handler modules Vercel would run), defaulting to the `local` provider.
