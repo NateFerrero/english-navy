@@ -53,10 +53,10 @@ async function request(path, { method = "GET", body, auth = false } = {}) {
 export const realApi = {
   name: "real",
 
-  async signUp({ email, password }) {
+  async signUp({ email, password, inviteCode }) {
     const data = await request("/api/signup", {
       method: "POST",
-      body: { email, password },
+      body: { email, password, inviteCode },
     });
     setToken(data.token);
     return data.user;
@@ -82,6 +82,20 @@ export const realApi = {
 
   async updateProfile(updates) {
     return request("/api/profile", { method: "PUT", auth: true, body: updates });
+  },
+
+  async listInviteCodes() {
+    const data = await request("/api/invite-codes", { auth: true });
+    return data;
+  },
+
+  async createInviteCodes({ count = 1 } = {}) {
+    const data = await request("/api/invite-codes", {
+      method: "POST",
+      auth: true,
+      body: { count },
+    });
+    return data;
   },
 
   async listUsers() {

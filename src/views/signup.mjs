@@ -5,9 +5,20 @@ import { getApi } from "../api/index.mjs";
 import { setSessionEmail } from "../session.mjs";
 
 export function renderSignup(outlet) {
+  const inviteCodeError = el("div", { class: "error" });
   const emailError = el("div", { class: "error" });
   const passwordError = el("div", { class: "error" });
   const formAlert = el("div");
+
+  const inviteCodeInput = el("input", {
+    id: "invite-code",
+    name: "invite-code",
+    type: "text",
+    autocomplete: "one-time-code",
+    autocapitalize: "characters",
+    placeholder: "XXXX-XXXX-XXXX",
+    required: "",
+  });
 
   const emailInput = el("input", {
     id: "email",
@@ -44,9 +55,14 @@ export function renderSignup(outlet) {
 
   function validate() {
     let ok = true;
+    inviteCodeError.textContent = "";
     emailError.textContent = "";
     passwordError.textContent = "";
 
+    if (!inviteCodeInput.value.trim()) {
+      inviteCodeError.textContent = "Enter an invite code.";
+      ok = false;
+    }
     if (!isValidEmail(emailInput.value)) {
       emailError.textContent = "Enter a valid email address.";
       ok = false;
@@ -68,6 +84,7 @@ export function renderSignup(outlet) {
 
     try {
       const user = await getApi().signUp({
+        inviteCode: inviteCodeInput.value,
         email: emailInput.value,
         password: passwordInput.value,
       });
@@ -87,6 +104,11 @@ export function renderSignup(outlet) {
     [
       formAlert,
       el("div", { class: "field" }, [
+        el("label", { for: "invite-code", text: "Invite code" }),
+        inviteCodeInput,
+        inviteCodeError,
+      ]),
+      el("div", { class: "field" }, [
         el("label", { for: "email", text: "Email address" }),
         emailInput,
         emailError,
@@ -102,7 +124,10 @@ export function renderSignup(outlet) {
 
   const card = el("div", { class: "card" }, [
     el("h2", { text: "Create your account" }),
-    el("p", { class: "subtitle", text: "Join The English Navy in seconds." }),
+    el("p", {
+      class: "subtitle",
+      text: "Enter your invite code to join The English Navy.",
+    }),
     form,
     el("p", { class: "form-foot" }, [
       "Already enlisted? ",
@@ -112,5 +137,5 @@ export function renderSignup(outlet) {
 
   clear(outlet);
   outlet.append(page(card));
-  emailInput.focus();
+  inviteCodeInput.focus();
 }

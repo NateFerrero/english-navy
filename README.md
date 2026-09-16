@@ -18,7 +18,7 @@ The English Navy — a small web app for user sign-up.
 - **Mock API toggle**: open the app with `?api=mock`. That persists
   `api = "mock"` in `sessionStorage`, so the mock stays active across navigation
   and reloads for the whole session.
-- **Sign up** with an email address and password.
+- **Sign up** with an invite code, email address, and password.
 
 ## Run it
 
@@ -88,16 +88,19 @@ Routes:
 | Method | Route          | Purpose                                             |
 | ------ | -------------- | --------------------------------------------------- |
 | GET    | `/api/health`  | Liveness + active DB provider                       |
-| POST   | `/api/signup`  | Create account + provision the user's own database  |
-| POST   | `/api/login`   | Authenticate, return a session token                |
-| GET    | `/api/me`      | Current account (Bearer token)                      |
-| GET    | `/api/profile` | Read the user's **secondary** database              |
-| PUT    | `/api/profile` | Write the user's **secondary** database             |
+| POST   | `/api/signup`       | Redeem invite code + create account + provision the user's own database |
+| POST   | `/api/login`        | Authenticate, return a session token                                  |
+| GET    | `/api/me`           | Current account (Bearer token)                                        |
+| GET    | `/api/profile`      | Read the user's **secondary** database                                |
+| PUT    | `/api/profile`      | Write the user's **secondary** database                               |
+| GET    | `/api/invite-codes` | List invite codes created by the current user                         |
+| POST   | `/api/invite-codes` | Create 1-100 invite codes, up to 100 total per user                   |
 
 ### Two-tier database architecture
 
-- **Primary database** — user accounts only. Each `users` row also stores the
-  **connection** (`db_url` + `db_auth_token`) to that user's own database.
+- **Primary database** — user accounts and invite codes. Each `users` row also
+  stores the **connection** (`db_url` + `db_auth_token`) to that user's own
+  database, and invite codes point back to the user who created them.
 - **Secondary databases** — one Turso database **per user**, provisioned on
   sign-up. Per-user application data (e.g. `profile`) lives here, reached using
   the connection stored in the primary database.
