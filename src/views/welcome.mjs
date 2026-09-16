@@ -1,8 +1,23 @@
-import { el, clear, crest } from "../ui.mjs";
+import { el, clear, crest, icon } from "../ui.mjs";
 import { page } from "../layout.mjs";
 import { navigate } from "../router.mjs";
 import { getSessionEmail } from "../session.mjs";
 import { getApi } from "../api/index.mjs";
+
+async function copyText(value) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = el("textarea", { class: "copy-buffer" });
+  textarea.value = value;
+  document.body.append(textarea);
+  textarea.select();
+  const copied = document.execCommand("copy");
+  textarea.remove();
+  if (!copied) throw new Error("Copy failed.");
+}
 
 export function renderWelcome(outlet) {
   const email = getSessionEmail();
@@ -58,10 +73,29 @@ function renderInvitePanel() {
       return;
     }
     for (const invite of inviteCodes) {
+      const isUnused = !invite.claimedAt;
       list.append(
-        el("li", {}, [
-          el("code", { text: invite.code }),
-          invite.claimedAt ? " — used" : " — unused",
+        el("li", { class: "invite-row" }, [
+          el("span", { class: "invite-code-meta" }, [
+            el("code", { text: invite.code }),
+            isUnused ? " — unused" : " — used",
+          ]),
+          isUnused
+            ? el("button", {
+                class: "copy-button",
+                type: "button",
+                "aria-label": `Copy invite code ${invite.code}`,
+                title: "Copy invite code",
+                onclick: async () => {
+                  try {
+                    await copyText(invite.code);
+                    status.textContent = `Copied ${invite.code}.`;
+                  } catch {
+                    status.textContent = "Could not copy invite code.";
+                  }
+                },
+              }, [icon("copy", 18)])
+            : null,
         ])
       );
     }
