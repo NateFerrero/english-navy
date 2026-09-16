@@ -1,0 +1,16 @@
+# Dependencies
+node_modules/
+
+# Local libSQL databases (local DB provider)
+.data/
+
+# Vercel
+.vercel/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store

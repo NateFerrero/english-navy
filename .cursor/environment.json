@@ -1,0 +1,11 @@
+{
+  "name": "english-navy",
+  "install": "npm install",
+  "terminals": [
+    {
+      "name": "dev-server",
+      "command": "node server.mjs"
+    }
+  ],
+  "ports": [3000]
+}
