@@ -71,6 +71,7 @@ export function renderSignup(outlet) {
       passwordError.textContent = "Password must be at least 8 characters.";
       ok = false;
     }
+    if (!ok) setAlert("error", "Fix the highlighted fields to create your account.");
     return ok;
   }
 
