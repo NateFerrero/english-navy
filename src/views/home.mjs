@@ -18,7 +18,7 @@ function renderSignedInHome(email) {
         class: "btn btn-brass",
         href: "/profile",
         "data-link": "",
-        text: "Edit profile",
+        text: "View profile",
       }),
       el("a", {
         class: "btn btn-ghost",
