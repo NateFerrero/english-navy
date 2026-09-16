@@ -19,6 +19,10 @@ import { seedUserDatabase } from "../lib/userdb.mjs";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+function isUniqueEmailConstraint(err) {
+  return err?.code === "SQLITE_CONSTRAINT" && /users\.email/i.test(err.message);
+}
+
 export default withErrors(async function handler(req, res) {
   if (handlePreflight(req, res)) return;
   if (req.method !== "POST") return methodNotAllowed(res, ["POST"]);
@@ -57,7 +61,12 @@ export default withErrors(async function handler(req, res) {
   };
 
   // 2) Store the account + the connection to its secondary DB in the primary DB.
-  await insertUser(user);
+  try {
+    await insertUser(user);
+  } catch (err) {
+    if (!isUniqueEmailConstraint(err)) throw err;
+    throw httpError(409, "An account with that email already exists.", "EMAIL_TAKEN");
+  }
 
   // 3) Initialize the secondary database schema for this user.
   await seedUserDatabase(user);
