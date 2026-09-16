@@ -16,9 +16,15 @@ function renderSignedInHome(email) {
     el("div", { class: "account-actions" }, [
       el("a", {
         class: "btn btn-brass",
-        href: "/welcome",
+        href: "/profile",
         "data-link": "",
-        text: "View welcome",
+        text: "Edit profile",
+      }),
+      el("a", {
+        class: "btn btn-ghost",
+        href: "/settings",
+        "data-link": "",
+        text: "Settings",
       }),
       el("button", {
         class: "btn btn-ghost",

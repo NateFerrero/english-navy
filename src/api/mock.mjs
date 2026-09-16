@@ -11,6 +11,13 @@ const INVITE_CODES_KEY = "mock:invite-codes";
 const MAX_INVITE_CODES_PER_USER = 100;
 const DEMO_INVITE_CODE = "DEMO-CODE-0001";
 const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const DEFAULT_PROFILE = {
+  display_name: "",
+  first_name: "",
+  last_name: "",
+  bio: "",
+  default_timezone: "UTC",
+};
 
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,6 +37,10 @@ function saveUsers(users) {
 
 function publicUser(user) {
   return { id: user.id, email: user.email, createdAt: user.createdAt };
+}
+
+function publicProfile(user) {
+  return { ...DEFAULT_PROFILE, display_name: user.email.split("@")[0], ...(user.profile || {}) };
 }
 
 function normalizeInviteCode(code) {
@@ -72,6 +83,17 @@ function publicInviteCode(invite) {
 function currentUserId() {
   const token = sessionStorage.getItem(TOKEN_KEY);
   return token?.startsWith("mock:") ? token.slice("mock:".length) : "";
+}
+
+function requireCurrentUser() {
+  const id = currentUserId();
+  const user = loadUsers().find((item) => item.id === id);
+  if (!user) {
+    const err = new Error("Please sign in to continue.");
+    err.code = "UNAUTHENTICATED";
+    throw err;
+  }
+  return user;
 }
 
 function randomInviteCode() {
@@ -133,6 +155,7 @@ export const mockApi = {
       passwordHash: fauxHash(password),
       createdAt: new Date().toISOString(),
       invitedByUserId: invite.createdByUserId,
+      profile: { ...DEFAULT_PROFILE, display_name: normalized.split("@")[0] },
     };
     invite.claimedByUserId = user.id;
     invite.claimedAt = new Date().toISOString();
@@ -166,17 +189,58 @@ export const mockApi = {
   async me() {
     await delay(100);
 
-    const token = sessionStorage.getItem(TOKEN_KEY);
-    const id = token?.startsWith("mock:") ? token.slice("mock:".length) : "";
-    const user = loadUsers().find((user) => user.id === id);
+    return publicUser(requireCurrentUser());
+  },
 
+  async getProfile() {
+    await delay(100);
+    const user = requireCurrentUser();
+    return { user: publicUser(user), profile: publicProfile(user) };
+  },
+
+  async updateProfile(updates) {
+    await delay(150);
+    const users = loadUsers();
+    const user = users.find((item) => item.id === currentUserId());
     if (!user) {
       const err = new Error("Please sign in to continue.");
       err.code = "UNAUTHENTICATED";
       throw err;
     }
 
-    return publicUser(user);
+    const allowed = ["display_name", "first_name", "last_name", "bio", "default_timezone"];
+    const profile = { ...publicProfile(user) };
+    for (const key of allowed) {
+      if (updates[key] !== undefined) profile[key] = String(updates[key]);
+    }
+    user.profile = profile;
+    saveUsers(users);
+    return { user: publicUser(user), profile };
+  },
+
+  async changePassword({ currentPassword, newPassword }) {
+    await delay(150);
+    const users = loadUsers();
+    const user = users.find((item) => item.id === currentUserId());
+    if (!user) {
+      const err = new Error("Please sign in to continue.");
+      err.code = "UNAUTHENTICATED";
+      throw err;
+    }
+    if (user.passwordHash !== fauxHash(currentPassword)) {
+      const err = new Error("Current password is incorrect.");
+      err.code = "INVALID_CURRENT_PASSWORD";
+      throw err;
+    }
+    if (String(newPassword || "").length < 8) {
+      const err = new Error("New password must be at least 8 characters.");
+      err.code = "WEAK_PASSWORD";
+      throw err;
+    }
+
+    user.passwordHash = fauxHash(newPassword);
+    saveUsers(users);
+    return { ok: true };
   },
 
   async listUsers() {

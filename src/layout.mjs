@@ -29,7 +29,7 @@ function themeButton() {
       return;
     }
     initialized = true;
-    button.replaceChildren(icon(theme, 18), el("span", { text: theme }));
+    button.replaceChildren(icon(theme, 18));
     button.setAttribute("aria-label", `Theme: ${theme}. Click to switch theme.`);
     button.setAttribute("title", `Theme: ${theme} (${resolvedTheme})`);
   }
@@ -43,6 +43,8 @@ export function page(content) {
   const email = getSessionEmail();
   const nav = el("nav", { class: "nav" }, [
     navLink("/", "Home"),
+    email ? navLink("/profile", "Profile") : null,
+    email ? navLink("/settings", "Settings") : null,
     email ? el("span", { class: "nav-user", text: email }) : navLink("/signin", "Sign in"),
     email ? null : navLink("/signup", "Sign up"),
     isMock() ? el("span", { class: "badge-mock", text: "Mock API" }) : null,
