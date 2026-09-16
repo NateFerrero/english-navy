@@ -9,10 +9,16 @@ import { clearSession, TOKEN_KEY } from "../session.mjs";
 const USERS_KEY = "mock:users";
 const INVITE_CODES_KEY = "mock:invite-codes";
 const LOG_KEY = "mock:activity-log";
+const CONTACTS_KEY = "mock:contacts";
+const REALMS_KEY = "mock:realms";
+const REALM_INVITATIONS_KEY = "mock:realm-invitations";
+const MESSAGE_THREADS_KEY = "mock:message-threads";
+const MESSAGE_INVITATIONS_KEY = "mock:message-invitations";
+const MESSAGES_KEY = "mock:messages";
 const MAX_INVITE_CODES_PER_USER = 100;
 const DEMO_INVITE_CODE = "DEMO-CODE-0001";
 const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const PAGE_RANK_PATHS = new Set(["/", "/profile", "/settings", "/log"]);
+const PAGE_RANK_PATHS = new Set(["/", "/profile", "/settings", "/log", "/realms", "/contacts", "/messages"]);
 const DEFAULT_PROFILE = {
   display_name: "",
   first_name: "",
@@ -89,6 +95,78 @@ function saveLogEntries(entries) {
   sessionStorage.setItem(LOG_KEY, JSON.stringify(entries));
 }
 
+function loadContacts() {
+  try {
+    return JSON.parse(sessionStorage.getItem(CONTACTS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveContacts(contacts) {
+  sessionStorage.setItem(CONTACTS_KEY, JSON.stringify(contacts));
+}
+
+function loadRealms() {
+  try {
+    return JSON.parse(sessionStorage.getItem(REALMS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRealms(realms) {
+  sessionStorage.setItem(REALMS_KEY, JSON.stringify(realms));
+}
+
+function loadRealmInvitations() {
+  try {
+    return JSON.parse(sessionStorage.getItem(REALM_INVITATIONS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveRealmInvitations(invitations) {
+  sessionStorage.setItem(REALM_INVITATIONS_KEY, JSON.stringify(invitations));
+}
+
+function loadMessageThreads() {
+  try {
+    return JSON.parse(sessionStorage.getItem(MESSAGE_THREADS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMessageThreads(threads) {
+  sessionStorage.setItem(MESSAGE_THREADS_KEY, JSON.stringify(threads));
+}
+
+function loadMessageInvitations() {
+  try {
+    return JSON.parse(sessionStorage.getItem(MESSAGE_INVITATIONS_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMessageInvitations(invitations) {
+  sessionStorage.setItem(MESSAGE_INVITATIONS_KEY, JSON.stringify(invitations));
+}
+
+function loadMessages() {
+  try {
+    return JSON.parse(sessionStorage.getItem(MESSAGES_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveMessages(messages) {
+  sessionStorage.setItem(MESSAGES_KEY, JSON.stringify(messages));
+}
+
 function recordLogEntry({ ownerUserId, actorUserId = ownerUserId, type, inviteCode = null, metadata = null }) {
   const entries = loadLogEntries();
   entries.unshift({
@@ -109,6 +187,108 @@ function publicInviteCode(invite) {
     createdAt: invite.createdAt,
     claimedAt: invite.claimedAt || null,
   };
+}
+
+function publicContact(contact) {
+  const user = loadUsers().find((item) => item.email === contact.email || item.id === contact.userId);
+  return {
+    id: contact.id,
+    email: user?.email || contact.email,
+    userId: user?.id || contact.userId || null,
+    source: contact.source || "manual",
+    createdAt: contact.createdAt,
+    registered: Boolean(user),
+  };
+}
+
+function publicRealm(realm, userId) {
+  const member = realm.members.find((item) => item.userId === userId);
+  const owner = loadUsers().find((item) => item.id === realm.ownerUserId);
+  return {
+    id: realm.id,
+    title: realm.title,
+    description: realm.description || "",
+    ownerUserId: realm.ownerUserId,
+    ownerEmail: owner?.email || null,
+    role: member?.role || (realm.ownerUserId === userId ? "owner" : "member"),
+    memberCount: realm.members.length,
+    createdAt: realm.createdAt,
+    joinedAt: member?.joinedAt || realm.createdAt,
+  };
+}
+
+function publicRealmInvitation(invitation) {
+  const realms = loadRealms();
+  const users = loadUsers();
+  const realm = realms.find((item) => item.id === invitation.realmId);
+  const inviter = users.find((item) => item.id === invitation.inviterUserId);
+  const invitee = users.find((item) => item.id === invitation.inviteeUserId);
+  return {
+    id: invitation.id,
+    realmId: invitation.realmId,
+    realmTitle: realm?.title || null,
+    realmDescription: realm?.description || "",
+    inviterEmail: inviter?.email || null,
+    inviteeEmail: invitee?.email || null,
+    status: invitation.status,
+    createdAt: invitation.createdAt,
+    respondedAt: invitation.respondedAt || null,
+  };
+}
+
+function acceptPendingMessageInvitationsForNewContact({ inviteeUserId, inviterUserId }) {
+  const invitations = loadMessageInvitations();
+  let changed = false;
+  for (const invitation of invitations) {
+    if (invitation.status !== "pending") continue;
+    if (invitation.inviteeUserId !== inviteeUserId) continue;
+    if (invitation.inviterUserId !== inviterUserId) continue;
+    invitation.status = "accepted";
+    invitation.respondedAt = new Date().toISOString();
+    changed = true;
+  }
+  if (changed) saveMessageInvitations(invitations);
+}
+
+function addContact({ ownerUserId, email, source = "manual" }) {
+  const normalized = String(email || "").trim().toLowerCase();
+  const users = loadUsers();
+  const contactUser = users.find((item) => item.email === normalized);
+  const contacts = loadContacts();
+  const existing = contacts.find((item) => item.ownerUserId === ownerUserId && item.email === normalized);
+  if (existing) {
+    if (contactUser) existing.userId = contactUser.id;
+    saveContacts(contacts);
+    if (contactUser?.id) {
+      acceptPendingMessageInvitationsForNewContact({ inviteeUserId: ownerUserId, inviterUserId: contactUser.id });
+    }
+    return publicContact(existing);
+  }
+  const contact = {
+    id: `con_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    ownerUserId,
+    email: normalized,
+    userId: contactUser?.id || null,
+    source,
+    createdAt: new Date().toISOString(),
+  };
+  contacts.unshift(contact);
+  saveContacts(contacts);
+  if (contactUser?.id) {
+    acceptPendingMessageInvitationsForNewContact({ inviteeUserId: ownerUserId, inviterUserId: contactUser.id });
+  }
+  return publicContact(contact);
+}
+
+function realmInviteOptionsFor(user) {
+  const contacts = loadContacts();
+  const users = loadUsers();
+  return contacts
+    .filter((contact) => contact.email === user.email && contact.ownerUserId !== user.id)
+    .map((contact) => users.find((item) => item.id === contact.ownerUserId))
+    .filter(Boolean)
+    .map(publicUser)
+    .sort((a, b) => a.email.localeCompare(b.email));
 }
 
 function currentUserId() {
@@ -194,6 +374,7 @@ export const mockApi = {
     saveUsers(users);
     saveInviteCodes(inviteCodes);
     sessionStorage.setItem(TOKEN_KEY, `mock:${user.id}`);
+    addContact({ ownerUserId: invite.createdByUserId, email: normalized, source: "invite_code" });
     recordLogEntry({
       ownerUserId: invite.createdByUserId,
       actorUserId: user.id,
@@ -307,6 +488,466 @@ export const mockApi = {
     user.preferences.pageRanks = {};
     saveUsers(users);
     return { ranks: {} };
+  },
+
+  async listContacts() {
+    await delay(100);
+    const user = requireCurrentUser();
+    return {
+      contacts: loadContacts()
+        .filter((contact) => contact.ownerUserId === user.id)
+        .map(publicContact),
+    };
+  },
+
+  async addContact({ email }) {
+    await delay(150);
+    const user = requireCurrentUser();
+    const normalized = String(email || "").trim().toLowerCase();
+    if (normalized === user.email) {
+      const err = new Error("You are already available to your own Realms.");
+      err.code = "SELF_CONTACT";
+      throw err;
+    }
+    const contact = addContact({ ownerUserId: user.id, email: normalized, source: "manual" });
+    recordLogEntry({
+      ownerUserId: user.id,
+      type: "contact_added",
+      metadata: { contactEmail: normalized },
+    });
+    return { contact };
+  },
+
+  async listMessageInbox() {
+    await delay(120);
+    const user = requireCurrentUser();
+
+    const threads = loadMessageThreads().filter((thread) => thread.participantIds?.includes(user.id));
+    const invitations = loadMessageInvitations();
+    const messages = loadMessages();
+    const users = loadUsers();
+    const contacts = loadContacts();
+
+    function threadInvitation(threadId) {
+      return invitations.find((inv) => inv.threadId === threadId) || null;
+    }
+
+    function lastMessage(threadId) {
+      const list = messages.filter((m) => m.threadId === threadId);
+      if (!list.length) return null;
+      list.sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+      return list[list.length - 1];
+    }
+
+    function otherParticipant(thread) {
+      const otherId = (thread.participantIds || []).find((id) => id !== user.id) || "";
+      const other = users.find((u) => u.id === otherId) || null;
+      return other ? publicUser(other) : null;
+    }
+
+    const threadSummaries = threads
+      .map((thread) => {
+        const other = otherParticipant(thread);
+        if (!other) return null;
+        const inv = threadInvitation(thread.id);
+        const last = lastMessage(thread.id);
+        return {
+          id: thread.id,
+          otherUser: { id: other.id, email: other.email },
+          lastMessage: last ? { body: last.body, createdAt: last.createdAt } : null,
+          invitation: inv
+            ? {
+                id: inv.id,
+                threadId: inv.threadId,
+                inviterUserId: inv.inviterUserId,
+                inviteeUserId: inv.inviteeUserId,
+                status: inv.status,
+              }
+            : null,
+          createdAt: thread.createdAt,
+        };
+      })
+      .filter(Boolean);
+
+    const inboxThreads = [];
+    const inboxInvitations = [];
+    for (const summary of threadSummaries) {
+      if (summary.invitation?.status === "pending" && summary.invitation.inviteeUserId === user.id) {
+        inboxInvitations.push(summary);
+      } else {
+        inboxThreads.push(summary);
+      }
+    }
+
+    // Compose options: mutual / outgoing (you added them) / incoming (they added you).
+    const myContacts = contacts
+      .filter((c) => c.ownerUserId === user.id)
+      .map(publicContact)
+      .filter((c) => c.userId);
+    const myContactIds = new Set(myContacts.map((c) => c.userId));
+    const reciprocal = new Set(
+      contacts
+        .filter((c) => myContactIds.has(c.ownerUserId) && c.email === user.email)
+        .map((c) => c.ownerUserId)
+    );
+    const options = myContacts.map((c) => ({
+      userId: c.userId,
+      email: c.email,
+      relationship: reciprocal.has(c.userId) ? "mutual" : "outgoing",
+    }));
+    const inboundUsers = contacts
+      .filter((c) => c.email === user.email && c.ownerUserId !== user.id)
+      .map((c) => users.find((u) => u.id === c.ownerUserId))
+      .filter(Boolean)
+      .map(publicUser)
+      .filter((u) => !myContactIds.has(u.id))
+      .map((u) => ({ userId: u.id, email: u.email, relationship: "incoming" }));
+    options.push(...inboundUsers);
+    options.sort((a, b) => String(a.email).localeCompare(String(b.email)));
+
+    return { viewerUserId: user.id, viewerEmail: user.email, threads: inboxThreads, invitations: inboxInvitations, composeOptions: options };
+  },
+
+  async createMessageThread({ otherUserId }) {
+    await delay(150);
+    const user = requireCurrentUser();
+    const users = loadUsers();
+    const other = users.find((u) => u.id === String(otherUserId || "")) || null;
+    if (!other) {
+      const err = new Error("User not found.");
+      err.code = "USER_NOT_FOUND";
+      throw err;
+    }
+    if (other.id === user.id) {
+      const err = new Error("You cannot message yourself.");
+      err.code = "SELF";
+      throw err;
+    }
+
+    const threads = loadMessageThreads();
+    const existing = threads.find(
+      (t) => Array.isArray(t.participantIds) && t.participantIds.includes(user.id) && t.participantIds.includes(other.id)
+    );
+    if (existing) return { threadId: existing.id };
+
+    const contacts = loadContacts();
+    const otherHasMe = contacts.some((c) => c.ownerUserId === other.id && c.email === user.email);
+    const iHaveOther = contacts.some((c) => c.ownerUserId === user.id && c.email === other.email);
+    if (!otherHasMe && !iHaveOther) {
+      const err = new Error("That user must add you as a contact (or you must add them) before messaging.");
+      err.code = "CONTACT_REQUIRED";
+      throw err;
+    }
+
+    const createdAt = new Date().toISOString();
+    const thread = {
+      id: `mth_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      createdAt,
+      participantIds: [user.id, other.id],
+    };
+    threads.unshift(thread);
+    saveMessageThreads(threads);
+
+    if (!otherHasMe && iHaveOther) {
+      const invitations = loadMessageInvitations();
+      invitations.unshift({
+        id: `min_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        threadId: thread.id,
+        inviterUserId: user.id,
+        inviteeUserId: other.id,
+        status: "pending",
+        createdAt,
+        respondedAt: null,
+      });
+      saveMessageInvitations(invitations);
+      recordLogEntry({
+        ownerUserId: other.id,
+        actorUserId: user.id,
+        type: "message_invitation_received",
+        metadata: { threadId: thread.id },
+      });
+    }
+
+    return { threadId: thread.id };
+  },
+
+  async getMessageThread({ threadId }) {
+    await delay(120);
+    const user = requireCurrentUser();
+    const threads = loadMessageThreads();
+    const thread = threads.find((t) => t.id === String(threadId || "")) || null;
+    if (!thread || !thread.participantIds?.includes(user.id)) {
+      const err = new Error("Thread not found.");
+      err.code = "THREAD_NOT_FOUND";
+      throw err;
+    }
+    const users = loadUsers();
+    const otherId = thread.participantIds.find((id) => id !== user.id) || "";
+    const other = users.find((u) => u.id === otherId) || null;
+    if (!other) {
+      const err = new Error("Thread not found.");
+      err.code = "THREAD_NOT_FOUND";
+      throw err;
+    }
+
+    const invitations = loadMessageInvitations();
+    const invitation = invitations.find((inv) => inv.threadId === thread.id) || null;
+    const canSend =
+      !invitation ||
+      invitation.status === "accepted" ||
+      (invitation.status === "pending" && invitation.inviterUserId === user.id);
+
+    const messages = loadMessages()
+      .filter((m) => m.threadId === thread.id)
+      .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+      .map((m) => ({
+        id: m.id,
+        body: m.body,
+        senderUserId: m.senderUserId,
+        senderEmail: users.find((u) => u.id === m.senderUserId)?.email || null,
+        createdAt: m.createdAt,
+      }));
+
+    return {
+      viewerUserId: user.id,
+      viewerEmail: user.email,
+      thread: { id: thread.id, otherUser: { id: other.id, email: other.email } },
+      invitation: invitation
+        ? {
+            id: invitation.id,
+            threadId: invitation.threadId,
+            inviterUserId: invitation.inviterUserId,
+            inviteeUserId: invitation.inviteeUserId,
+            status: invitation.status,
+            createdAt: invitation.createdAt,
+            respondedAt: invitation.respondedAt || null,
+          }
+        : null,
+      canSend,
+      messages,
+    };
+  },
+
+  async sendMessage({ threadId, body }) {
+    await delay(120);
+    const user = requireCurrentUser();
+    const text = String(body || "").trim();
+    if (!text) {
+      const err = new Error("Message cannot be empty.");
+      err.code = "EMPTY_MESSAGE";
+      throw err;
+    }
+    if (text.length > 4000) {
+      const err = new Error("Message is too long.");
+      err.code = "MESSAGE_TOO_LONG";
+      throw err;
+    }
+
+    const threads = loadMessageThreads();
+    const thread = threads.find((t) => t.id === String(threadId || "")) || null;
+    if (!thread || !thread.participantIds?.includes(user.id)) {
+      const err = new Error("Thread not found.");
+      err.code = "THREAD_NOT_FOUND";
+      throw err;
+    }
+
+    const invitations = loadMessageInvitations();
+    const invitation = invitations.find((inv) => inv.threadId === thread.id) || null;
+    if (invitation?.status === "declined") {
+      const err = new Error("This invitation was declined.");
+      err.code = "INVITATION_DECLINED";
+      throw err;
+    }
+    if (invitation?.status === "pending" && invitation.inviterUserId !== user.id) {
+      const err = new Error("You can preview this invitation but cannot reply until you add them as a contact.");
+      err.code = "INVITATION_PENDING";
+      throw err;
+    }
+
+    const messages = loadMessages();
+    const message = {
+      id: `msg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      threadId: thread.id,
+      senderUserId: user.id,
+      body: text,
+      createdAt: new Date().toISOString(),
+    };
+    messages.push(message);
+    saveMessages(messages);
+    recordLogEntry({ ownerUserId: user.id, type: "message_sent", metadata: { threadId: thread.id } });
+    return { message: { id: message.id, body: message.body, senderUserId: message.senderUserId, createdAt: message.createdAt } };
+  },
+
+  async respondToMessageInvitation({ invitationId, response }) {
+    await delay(150);
+    const user = requireCurrentUser();
+    const invitations = loadMessageInvitations();
+    const invitation = invitations.find((inv) => inv.id === String(invitationId || "") && inv.inviteeUserId === user.id && inv.status === "pending");
+    if (!invitation) {
+      const err = new Error("Invitation not found.");
+      err.code = "INVITATION_NOT_FOUND";
+      throw err;
+    }
+    invitation.status = response === "accept" ? "accepted" : "declined";
+    invitation.respondedAt = new Date().toISOString();
+    saveMessageInvitations(invitations);
+
+    if (invitation.status === "accepted") {
+      const inviter = loadUsers().find((u) => u.id === invitation.inviterUserId) || null;
+      if (inviter) {
+        addContact({ ownerUserId: user.id, email: inviter.email, source: "message_accept" });
+      }
+    }
+
+    recordLogEntry({ ownerUserId: user.id, type: `message_invitation_${invitation.status}`, metadata: { threadId: invitation.threadId } });
+    return {
+      invitation: {
+        id: invitation.id,
+        threadId: invitation.threadId,
+        inviterUserId: invitation.inviterUserId,
+        inviteeUserId: invitation.inviteeUserId,
+        status: invitation.status,
+        createdAt: invitation.createdAt,
+        respondedAt: invitation.respondedAt,
+      },
+    };
+  },
+
+  async listRealms() {
+    await delay(120);
+    const user = requireCurrentUser();
+    const realms = loadRealms()
+      .filter((realm) => realm.members.some((member) => member.userId === user.id))
+      .map((realm) => publicRealm(realm, user.id));
+    const invitations = loadRealmInvitations()
+      .filter((invitation) => invitation.inviteeUserId === user.id && invitation.status === "pending")
+      .map(publicRealmInvitation);
+    return { realms, inviteOptions: realmInviteOptionsFor(user), invitations };
+  },
+
+  async createRealm({ title, description }) {
+    await delay(200);
+    const user = requireCurrentUser();
+    const cleanTitle = String(title || "").trim();
+    if (!cleanTitle) {
+      const err = new Error("Enter a Realm title.");
+      err.code = "TITLE_REQUIRED";
+      throw err;
+    }
+    const realm = {
+      id: `rlm_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+      ownerUserId: user.id,
+      title: cleanTitle.slice(0, 80),
+      description: String(description || "").trim().slice(0, 500),
+      dbName: `en-rlm-${Date.now().toString(36)}`,
+      dbUrl: "mock:realm",
+      createdAt: new Date().toISOString(),
+      members: [{ userId: user.id, role: "owner", joinedAt: new Date().toISOString() }],
+    };
+    const realms = loadRealms();
+    realms.unshift(realm);
+    saveRealms(realms);
+    recordLogEntry({
+      ownerUserId: user.id,
+      type: "realm_created",
+      metadata: { realmId: realm.id, title: realm.title },
+    });
+    return { realm: publicRealm(realm, user.id) };
+  },
+
+  async inviteToRealm({ realmId, email }) {
+    await delay(150);
+    const user = requireCurrentUser();
+    const normalized = String(email || "").trim().toLowerCase();
+    const users = loadUsers();
+    const invitee = users.find((item) => item.email === normalized);
+    if (!invitee) {
+      const err = new Error("That email does not belong to an account yet.");
+      err.code = "INVITEE_NOT_FOUND";
+      throw err;
+    }
+    const realms = loadRealms();
+    const realm = realms.find((item) => item.id === realmId && item.ownerUserId === user.id);
+    if (!realm) {
+      const err = new Error("Realm not found.");
+      err.code = "REALM_NOT_FOUND";
+      throw err;
+    }
+    if (!loadContacts().some((contact) => contact.ownerUserId === invitee.id && contact.email === user.email)) {
+      const err = new Error("That user must add you as a Contact before you can invite them to a Realm.");
+      err.code = "CONTACT_REQUIRED";
+      throw err;
+    }
+    if (realm.members.some((member) => member.userId === invitee.id)) {
+      const err = new Error("That user is already a member of this Realm.");
+      err.code = "ALREADY_MEMBER";
+      throw err;
+    }
+
+    const invitations = loadRealmInvitations();
+    let invitation = invitations.find(
+      (item) => item.realmId === realmId && item.inviteeUserId === invitee.id && item.status === "pending"
+    );
+    if (!invitation) {
+      invitation = {
+        id: `rin_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+        realmId,
+        inviterUserId: user.id,
+        inviteeUserId: invitee.id,
+        status: "pending",
+        createdAt: new Date().toISOString(),
+        respondedAt: null,
+      };
+      invitations.unshift(invitation);
+      saveRealmInvitations(invitations);
+    }
+    recordLogEntry({
+      ownerUserId: invitee.id,
+      actorUserId: user.id,
+      type: "realm_invitation_received",
+      metadata: { realmId, realmTitle: realm.title },
+    });
+    return { invitation: publicRealmInvitation(invitation) };
+  },
+
+  async listRealmNotifications() {
+    await delay(100);
+    const user = requireCurrentUser();
+    const invitations = loadRealmInvitations()
+      .filter((invitation) => invitation.inviteeUserId === user.id && invitation.status === "pending")
+      .map(publicRealmInvitation);
+    return { invitations, count: invitations.length };
+  },
+
+  async respondToRealmInvitation({ invitationId, response }) {
+    await delay(150);
+    const user = requireCurrentUser();
+    const invitations = loadRealmInvitations();
+    const invitation = invitations.find(
+      (item) => item.id === invitationId && item.inviteeUserId === user.id && item.status === "pending"
+    );
+    if (!invitation) {
+      const err = new Error("Invitation not found.");
+      err.code = "INVITATION_NOT_FOUND";
+      throw err;
+    }
+    invitation.status = response === "accept" ? "accepted" : "declined";
+    invitation.respondedAt = new Date().toISOString();
+    if (invitation.status === "accepted") {
+      const realms = loadRealms();
+      const realm = realms.find((item) => item.id === invitation.realmId);
+      if (realm && !realm.members.some((member) => member.userId === user.id)) {
+        realm.members.push({ userId: user.id, role: "member", joinedAt: invitation.respondedAt });
+        saveRealms(realms);
+      }
+    }
+    saveRealmInvitations(invitations);
+    recordLogEntry({
+      ownerUserId: user.id,
+      type: `realm_invitation_${invitation.status}`,
+      metadata: { realmId: invitation.realmId },
+    });
+    return { invitation: publicRealmInvitation(invitation) };
   },
 
   async changePassword({ currentPassword, newPassword }) {

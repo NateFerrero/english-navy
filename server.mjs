@@ -102,11 +102,17 @@ async function handleApi(req, res, pathname) {
 
   let handler = apiModuleCache.get(name);
   if (!handler) {
-    const modUrl = new URL(`./api/${name}.js`, import.meta.url);
-    try {
-      const mod = await import(modUrl.href);
-      handler = mod.default;
-    } catch {
+    for (const ext of [".mjs", ".js"]) {
+      const modUrl = new URL(`./api/${name}${ext}`, import.meta.url);
+      try {
+        const mod = await import(modUrl.href);
+        handler = mod.default;
+        break;
+      } catch {
+        /* try the next supported module extension */
+      }
+    }
+    if (!handler) {
       res.writeHead(404, { "Content-Type": "application/json; charset=utf-8" });
       res.end(JSON.stringify({ error: `No API route '/api/${name}'` }));
       return;
