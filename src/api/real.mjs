@@ -94,6 +94,26 @@ export const realApi = {
     return request("/api/contacts", { method: "POST", auth: true, body: { email } });
   },
 
+  async listMessageInbox() {
+    return request("/api/messages", { auth: true });
+  },
+
+  async createMessageThread({ otherUserId }) {
+    return request("/api/messages?action=thread", { method: "POST", auth: true, body: { otherUserId } });
+  },
+
+  async getMessageThread({ threadId }) {
+    return request(`/api/messages?action=thread&id=${encodeURIComponent(threadId)}`, { auth: true });
+  },
+
+  async sendMessage({ threadId, body }) {
+    return request("/api/messages?action=send", { method: "POST", auth: true, body: { threadId, body } });
+  },
+
+  async respondToMessageInvitation({ invitationId, response }) {
+    return request("/api/messages?action=respond", { method: "POST", auth: true, body: { invitationId, response } });
+  },
+
   async listRealms() {
     return request("/api/realms", { auth: true });
   },
