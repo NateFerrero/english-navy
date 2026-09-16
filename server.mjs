@@ -29,6 +29,20 @@ const MIME = {
   ".woff2": "font/woff2",
 };
 
+function isBlockedPathname(pathname) {
+  const [firstSegment] = pathname.split("/").filter(Boolean);
+  return (
+    pathname
+      .split("/")
+      .filter(Boolean)
+      .some((segment) => segment.startsWith(".")) ||
+    ["api", "lib", "node_modules"].includes(firstSegment) ||
+    ["AGENTS.md", "README.md", "LICENSE", "package.json", "package-lock.json", "server.mjs", "build.mjs", "vercel.json"].includes(
+      firstSegment
+    )
+  );
+}
+
 async function tryFile(pathname) {
   if (!STATIC_ALLOWLIST.some((entry) => pathname === entry || pathname.startsWith(entry))) {
     return null;
@@ -106,6 +120,15 @@ const server = createServer(async (req, res) => {
 
     if (pathname.startsWith("/api/")) {
       await handleApi(req, res, pathname);
+      return;
+    }
+
+    if (isBlockedPathname(pathname)) {
+      res.writeHead(404, {
+        "Content-Type": "text/plain; charset=utf-8",
+        "X-Content-Type-Options": "nosniff",
+      });
+      res.end("Not found");
       return;
     }
 
