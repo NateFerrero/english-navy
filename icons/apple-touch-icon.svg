@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="The English Navy">
+  <defs>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#13315c" />
+      <stop offset="1" stop-color="#0b2545" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="#0b2545"/>
+  <g transform="translate(0 8)">
+    <path d="M256 48 416 112v144c0 128-88 208-160 240-72-32-160-112-160-240V112z" fill="url(#sea)" stroke="#c9a227" stroke-width="16"/>
+    <path d="M256 144v200M192 192h128M184 336c24 24 136 24 144 0" fill="none" stroke="#c9a227" stroke-width="20" stroke-linecap="round"/>
+    <circle cx="256" cy="124" r="16" fill="#c9a227"/>
+  </g>
+</svg>

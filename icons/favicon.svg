@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="The English Navy">
+  <defs>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#13315c" />
+      <stop offset="1" stop-color="#0b2545" />
+    </linearGradient>
+  </defs>
+  <path d="M32 2 58 12v20c0 16-11 26-26 30C17 58 6 48 6 32V12z" fill="url(#sea)" stroke="#c9a227" stroke-width="2"/>
+  <path d="M32 16v28M22 24h20M20 44c4 4 20 4 24 0" fill="none" stroke="#c9a227" stroke-width="2.4" stroke-linecap="round"/>
+  <circle cx="32" cy="13" r="2.4" fill="#c9a227"/>
+</svg>
