@@ -92,6 +92,10 @@ export const realApi = {
     });
   },
 
+  async listLogEntries() {
+    return request("/api/log", { auth: true });
+  },
+
   async listInviteCodes() {
     const data = await request("/api/invite-codes", { auth: true });
     return data;

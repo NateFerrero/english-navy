@@ -7,7 +7,7 @@ import {
   httpError,
 } from "../lib/http.mjs";
 import { verifyPassword, signToken } from "../lib/auth.mjs";
-import { ensurePrimarySchema, findUserByEmail, publicUser } from "../lib/primary.mjs";
+import { ensurePrimarySchema, findUserByEmail, publicUser, recordActivityLog } from "../lib/primary.mjs";
 
 export default withErrors(async function handler(req, res) {
   if (handlePreflight(req, res)) return;
@@ -26,5 +26,6 @@ export default withErrors(async function handler(req, res) {
   }
 
   const token = signToken(user.id);
+  await recordActivityLog({ ownerUserId: user.id, eventType: "sign_in" });
   sendJson(res, 200, { user: publicUser(user), token });
 });

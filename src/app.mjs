@@ -3,6 +3,7 @@
 import { registerRoute, setNotFound, startRouter } from "./router.mjs";
 import { syncApiFromUrl } from "./api/index.mjs";
 import { renderHome } from "./views/home.mjs";
+import { renderLog } from "./views/log.mjs";
 import { renderProfile } from "./views/profile.mjs";
 import { renderSettings } from "./views/settings.mjs";
 import { renderSignin } from "./views/signin.mjs";
@@ -17,6 +18,7 @@ syncApiFromUrl();
 applyTheme();
 
 registerRoute("/", renderHome);
+registerRoute("/log", renderLog);
 registerRoute("/profile", renderProfile);
 registerRoute("/settings", renderSettings);
 registerRoute("/signin", renderSignin);

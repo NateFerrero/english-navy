@@ -1,3 +1,7 @@
+# Repository instructions
+
+- Prefer Node.js over Python for repository scripting, one-off checks, and test helpers.
+- Use `ENGLISH_NAVY_PRODUCTION_URL` when exploring or testing the production deployment. The production deployment is public and is not behind Vercel deployment protection.
 # Agent Instructions
 
 ## Before Starting Work
