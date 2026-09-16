@@ -14,6 +14,7 @@ import {
   insertUser,
   publicUser,
   normalizeInviteCode,
+  recordActivityLog,
   releaseInviteCodeReservation,
   reserveInviteCodeForUser,
 } from "../lib/primary.mjs";
@@ -86,6 +87,13 @@ export default withErrors(async function handler(req, res) {
 
     // 3) Initialize the secondary database schema for this user.
     await seedUserDatabase(user);
+    await recordActivityLog({
+      ownerUserId: invite.created_by_user_id,
+      actorUserId: id,
+      eventType: "invitation_accepted",
+      inviteCode,
+      metadata: { invitedEmail: email },
+    });
   } catch (err) {
     if (!userInserted) await releaseInviteCodeReservation(inviteCode, id);
     throw err;

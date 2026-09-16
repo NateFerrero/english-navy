@@ -8,7 +8,7 @@ import {
 } from "../lib/http.mjs";
 import { hashPassword, verifyPassword } from "../lib/auth.mjs";
 import { requireUser } from "../lib/session.mjs";
-import { updateUserPassword } from "../lib/primary.mjs";
+import { recordActivityLog, updateUserPassword } from "../lib/primary.mjs";
 
 export default withErrors(async function handler(req, res) {
   if (handlePreflight(req, res)) return;
@@ -27,5 +27,6 @@ export default withErrors(async function handler(req, res) {
   }
 
   await updateUserPassword(user.id, hashPassword(newPassword));
+  await recordActivityLog({ ownerUserId: user.id, eventType: "password_change" });
   sendJson(res, 200, { ok: true });
 });

@@ -8,6 +8,7 @@ import { clearSession, TOKEN_KEY } from "../session.mjs";
 
 const USERS_KEY = "mock:users";
 const INVITE_CODES_KEY = "mock:invite-codes";
+const LOG_KEY = "mock:activity-log";
 const MAX_INVITE_CODES_PER_USER = 100;
 const DEMO_INVITE_CODE = "DEMO-CODE-0001";
 const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -69,6 +70,32 @@ function loadInviteCodes() {
 
 function saveInviteCodes(codes) {
   sessionStorage.setItem(INVITE_CODES_KEY, JSON.stringify(codes));
+}
+
+function loadLogEntries() {
+  try {
+    return JSON.parse(sessionStorage.getItem(LOG_KEY)) || [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLogEntries(entries) {
+  sessionStorage.setItem(LOG_KEY, JSON.stringify(entries));
+}
+
+function recordLogEntry({ ownerUserId, actorUserId = ownerUserId, type, inviteCode = null, metadata = null }) {
+  const entries = loadLogEntries();
+  entries.unshift({
+    id: `log_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+    ownerUserId,
+    actorUserId,
+    type,
+    inviteCode,
+    metadata,
+    createdAt: new Date().toISOString(),
+  });
+  saveLogEntries(entries);
 }
 
 function publicInviteCode(invite) {
@@ -163,6 +190,13 @@ export const mockApi = {
     saveUsers(users);
     saveInviteCodes(inviteCodes);
     sessionStorage.setItem(TOKEN_KEY, `mock:${user.id}`);
+    recordLogEntry({
+      ownerUserId: invite.createdByUserId,
+      actorUserId: user.id,
+      type: "invitation_accepted",
+      inviteCode: normalizedInviteCode,
+      metadata: { invitedEmail: normalized },
+    });
 
     return publicUser(user);
   },
@@ -183,6 +217,7 @@ export const mockApi = {
     }
 
     sessionStorage.setItem(TOKEN_KEY, `mock:${user.id}`);
+    recordLogEntry({ ownerUserId: user.id, type: "sign_in" });
     return publicUser(user);
   },
 
@@ -215,6 +250,13 @@ export const mockApi = {
     }
     user.profile = profile;
     saveUsers(users);
+    recordLogEntry({
+      ownerUserId: user.id,
+      type: "profile_change",
+      metadata: {
+        fields: allowed.filter((key) => updates[key] !== undefined),
+      },
+    });
     return { user: publicUser(user), profile };
   },
 
@@ -240,7 +282,26 @@ export const mockApi = {
 
     user.passwordHash = fauxHash(newPassword);
     saveUsers(users);
+    recordLogEntry({ ownerUserId: user.id, type: "password_change" });
     return { ok: true };
+  },
+
+  async listLogEntries() {
+    await delay(100);
+    const user = requireCurrentUser();
+    const users = loadUsers();
+    const entries = loadLogEntries()
+      .filter((entry) => entry.ownerUserId === user.id)
+      .map((entry) => ({
+        id: entry.id,
+        type: entry.type,
+        createdAt: entry.createdAt,
+        actorUserId: entry.actorUserId || null,
+        actorEmail: users.find((item) => item.id === entry.actorUserId)?.email || null,
+        inviteCode: entry.inviteCode || null,
+        metadata: entry.metadata || null,
+      }));
+    return { entries };
   },
 
   async listUsers() {
@@ -303,6 +364,11 @@ export const mockApi = {
     }
 
     saveInviteCodes(inviteCodes);
+    recordLogEntry({
+      ownerUserId: userId,
+      type: "invite_created",
+      metadata: { count: created.length },
+    });
     return {
       inviteCodes: created.map(publicInviteCode),
       remaining: remaining - created.length,

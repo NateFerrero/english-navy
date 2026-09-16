@@ -45,6 +45,7 @@ export function page(content) {
     navLink("/", "Home"),
     email ? navLink("/profile", "Profile") : null,
     email ? navLink("/settings", "Settings") : null,
+    email ? navLink("/log", "Log") : null,
     email ? el("span", { class: "nav-user", text: email }) : navLink("/signin", "Sign in"),
     email ? null : navLink("/signup", "Sign up"),
     isMock() ? el("span", { class: "badge-mock", text: "Mock API" }) : null,

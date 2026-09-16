@@ -12,6 +12,7 @@ import {
   createInviteCodesForUser,
   ensurePrimarySchema,
   listInviteCodesByCreator,
+  recordActivityLog,
 } from "../lib/primary.mjs";
 
 const MAX_INVITE_CODES_PER_USER = 100;
@@ -58,6 +59,11 @@ export default withErrors(async function handler(req, res) {
       throw err;
     }
 
+    await recordActivityLog({
+      ownerUserId: user.id,
+      eventType: "invite_created",
+      metadata: { count: inviteCodes.length },
+    });
     return sendJson(res, 201, {
       inviteCodes,
       remaining: remaining - inviteCodes.length,
