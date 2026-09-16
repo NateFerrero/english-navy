@@ -1,5 +1,4 @@
 import { handlePreflight, sendJson, withErrors, methodNotAllowed } from "../lib/http.mjs";
-import { config } from "../lib/config.mjs";
 import { ensurePrimarySchema } from "../lib/primary.mjs";
 
 export default withErrors(async function handler(req, res) {
@@ -12,7 +11,6 @@ export default withErrors(async function handler(req, res) {
   sendJson(res, 200, {
     ok: true,
     service: "english-navy-api",
-    provider: config.provider,
     time: new Date().toISOString(),
   });
 });

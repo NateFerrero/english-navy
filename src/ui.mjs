@@ -1,8 +1,8 @@
 // Tiny DOM helpers. No framework, no dependencies.
 
 // Create an element from a tag, attributes, and children.
-// Attributes: `class`, `text`, `html`, data-*, on* handlers, and everything else
-// is set as an attribute.
+// Attributes: `class`, `text`, data-*, on* handlers, and everything else is set
+// as an attribute.
 export function el(tag, attrs = {}, children = []) {
   const node = document.createElement(tag);
 
@@ -12,8 +12,6 @@ export function el(tag, attrs = {}, children = []) {
       node.className = value;
     } else if (key === "text") {
       node.textContent = value;
-    } else if (key === "html") {
-      node.innerHTML = value;
     } else if (key.startsWith("on") && typeof value === "function") {
       node.addEventListener(key.slice(2).toLowerCase(), value);
     } else {

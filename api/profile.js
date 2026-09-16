@@ -8,6 +8,7 @@ import {
   readJsonBody,
   withErrors,
   methodNotAllowed,
+  checkRateLimit,
 } from "../lib/http.mjs";
 import { requireUser } from "../lib/session.mjs";
 import { getProfile, updateProfile } from "../lib/userdb.mjs";
@@ -24,6 +25,7 @@ export default withErrors(async function handler(req, res) {
   }
 
   if (req.method === "PUT") {
+    checkRateLimit(req, "profile", { limit: 60, windowMs: 15 * 60 * 1000 });
     const body = await readJsonBody(req);
     const fields = ["display_name", "first_name", "last_name", "bio", "default_timezone"].filter(
       (key) => body[key] !== undefined

@@ -6,6 +6,8 @@ import {
   withErrors,
   methodNotAllowed,
   httpError,
+  setSessionCookie,
+  checkRateLimit,
 } from "../lib/http.mjs";
 import { hashPassword, signToken } from "../lib/auth.mjs";
 import {
@@ -22,6 +24,7 @@ import { provisionUserDatabase } from "../lib/provisioner.mjs";
 import { seedUserDatabase } from "../lib/userdb.mjs";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_PASSWORD_LENGTH = 1024;
 
 function isUniqueEmailConstraint(err) {
   return err?.code === "SQLITE_CONSTRAINT" && /users\.email/i.test(err.message);
@@ -30,6 +33,7 @@ function isUniqueEmailConstraint(err) {
 export default withErrors(async function handler(req, res) {
   if (handlePreflight(req, res)) return;
   if (req.method !== "POST") return methodNotAllowed(res, ["POST"]);
+  checkRateLimit(req, "signup", { limit: 10, windowMs: 15 * 60 * 1000 });
 
   const body = await readJsonBody(req);
   const email = String(body.email || "").trim().toLowerCase();
@@ -42,15 +46,14 @@ export default withErrors(async function handler(req, res) {
   if (password.length < 8) {
     throw httpError(400, "Password must be at least 8 characters.", "WEAK_PASSWORD");
   }
+  if (password.length > MAX_PASSWORD_LENGTH) {
+    throw httpError(400, "Password is too long.", "PASSWORD_TOO_LONG");
+  }
   if (!inviteCode) {
     throw httpError(400, "Enter an invite code.", "INVITE_CODE_REQUIRED");
   }
 
   await ensurePrimarySchema();
-
-  if (await findUserByEmail(email)) {
-    throw httpError(409, "An account with that email already exists.", "EMAIL_TAKEN");
-  }
 
   const id = `usr_${crypto.randomBytes(9).toString("hex")}`;
   const createdAt = new Date().toISOString();
@@ -62,6 +65,10 @@ export default withErrors(async function handler(req, res) {
   let userInserted = false;
   let user;
   try {
+    if (await findUserByEmail(email)) {
+      throw httpError(400, "Could not create an account with those details.", "SIGNUP_REJECTED");
+    }
+
     // 1) Provision this user's OWN secondary database and get its connection.
     const connection = await provisionUserDatabase(id);
 
@@ -82,7 +89,7 @@ export default withErrors(async function handler(req, res) {
       userInserted = true;
     } catch (err) {
       if (!isUniqueEmailConstraint(err)) throw err;
-      throw httpError(409, "An account with that email already exists.", "EMAIL_TAKEN");
+      throw httpError(400, "Could not create an account with those details.", "SIGNUP_REJECTED");
     }
 
     // 3) Initialize the secondary database schema for this user.
@@ -99,6 +106,6 @@ export default withErrors(async function handler(req, res) {
     throw err;
   }
 
-  const token = signToken(id);
-  sendJson(res, 201, { user: publicUser(user), token });
+  setSessionCookie(req, res, signToken(user));
+  sendJson(res, 201, { user: publicUser(user) });
 });

@@ -13,6 +13,9 @@ import { fileURLToPath } from "node:url";
 const ROOT = resolve(fileURLToPath(new URL(".", import.meta.url)));
 const PORT = Number(process.env.PORT) || 3000;
 const HOST = process.env.HOST || "0.0.0.0";
+const STATIC_ALLOWLIST = ["/index.html", "/styles.css", "/src/"];
+const STATIC_FILE_ALLOWLIST = new Set([resolve(ROOT, "index.html"), resolve(ROOT, "styles.css")]);
+const STATIC_DIR_ALLOWLIST = [resolve(ROOT, "src")];
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -27,9 +30,18 @@ const MIME = {
 };
 
 async function tryFile(pathname) {
+  if (!STATIC_ALLOWLIST.some((entry) => pathname === entry || pathname.startsWith(entry))) {
+    return null;
+  }
   // Prevent path traversal outside ROOT.
   const safePath = normalize(join(ROOT, pathname));
-  if (!safePath.startsWith(ROOT)) return null;
+  if (!safePath.startsWith(`${ROOT}/`) && safePath !== ROOT) return null;
+  if (
+    !STATIC_FILE_ALLOWLIST.has(safePath) &&
+    !STATIC_DIR_ALLOWLIST.some((dir) => safePath.startsWith(`${dir}/`))
+  ) {
+    return null;
+  }
   try {
     const info = await stat(safePath);
     if (info.isFile()) return safePath;
@@ -45,6 +57,11 @@ async function send(res, filePath, status = 200) {
   res.writeHead(status, {
     "Content-Type": type,
     "Cache-Control": "no-cache",
+    "Content-Security-Policy": "default-src 'self'; base-uri 'self'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
   });
   res.end(body);
 }
@@ -112,7 +129,8 @@ const server = createServer(async (req, res) => {
     await send(res, join(ROOT, "index.html"));
   } catch (err) {
     res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
-    res.end(`Server error: ${err.message}`);
+    console.error("[server] error:", err);
+    res.end("Server error");
   }
 });
 

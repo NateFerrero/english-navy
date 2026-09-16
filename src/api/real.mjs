@@ -1,32 +1,20 @@
 // Real API — talks to the backend serverless functions under /api.
 //
 // Mirrors the mock API's interface so views work unchanged in either mode.
-// The session token returned by sign-up / login is kept in sessionStorage and
-// sent as a Bearer token on authenticated requests.
+// The backend keeps the real session in an HttpOnly SameSite cookie.
 
-import { clearSession, TOKEN_KEY } from "../session.mjs";
-
-function getToken() {
-  return sessionStorage.getItem(TOKEN_KEY);
-}
-
-function setToken(token) {
-  if (token) sessionStorage.setItem(TOKEN_KEY, token);
-}
+import { clearSession } from "../session.mjs";
 
 async function request(path, { method = "GET", body, auth = false } = {}) {
   const headers = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (auth) {
-    const token = getToken();
-    if (token) headers["Authorization"] = `Bearer ${token}`;
-  }
 
   let res;
   try {
     res = await fetch(path, {
       method,
       headers,
+      credentials: "same-origin",
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {
@@ -58,7 +46,6 @@ export const realApi = {
       method: "POST",
       body: { email, password, inviteCode },
     });
-    setToken(data.token);
     return data.user;
   },
 
@@ -67,7 +54,6 @@ export const realApi = {
       method: "POST",
       body: { email, password },
     });
-    setToken(data.token);
     return data.user;
   },
 
@@ -117,7 +103,12 @@ export const realApi = {
     throw err;
   },
 
-  logOut() {
+  async logOut() {
+    try {
+      await request("/api/me", { method: "DELETE" });
+    } catch {
+      // Local UI state should still clear if the server session is already gone.
+    }
     clearSession();
   },
 };

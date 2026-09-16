@@ -1,5 +1,6 @@
 # Dependencies
 node_modules/
+dist/
 
 # Local libSQL databases (local DB provider)
 .data/
@@ -11,6 +12,10 @@ node_modules/
 .env
 .env.*
 !.env.example
+*.key
+*.pem
+*.p12
+*.pfx
 
 # OS
 .DS_Store
