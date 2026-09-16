@@ -266,6 +266,49 @@ main {
   color: var(--navy-2);
 }
 
+.profile-loading {
+  align-items: center;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  min-height: 180px;
+  text-align: center;
+}
+
+.profile-loading p {
+  margin: 0;
+}
+
+.profile-details {
+  margin: 0 0 20px;
+}
+
+.profile-details div {
+  border-top: 1px solid var(--line);
+  padding: 12px 0;
+}
+
+.profile-details div:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.profile-details dt {
+  color: var(--navy-2);
+  font-size: 0.86rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.profile-details dd {
+  margin: 0;
+}
+
+.profile-cancel {
+  margin-top: 10px;
+  width: 100%;
+}
+
 .field {
   margin-bottom: 16px;
   text-align: left;
