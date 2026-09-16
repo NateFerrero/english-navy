@@ -7,5 +7,10 @@
       "command": "node server.mjs"
     }
   ],
-  "ports": [3000]
+  "ports": [
+    {
+      "name": "dev-server",
+      "port": 3000
+    }
+  ]
 }
