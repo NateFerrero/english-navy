@@ -84,6 +84,14 @@ export const realApi = {
     return request("/api/profile", { method: "PUT", auth: true, body: updates });
   },
 
+  async changePassword({ currentPassword, newPassword }) {
+    return request("/api/password", {
+      method: "PUT",
+      auth: true,
+      body: { currentPassword, newPassword },
+    });
+  },
+
   async listInviteCodes() {
     const data = await request("/api/invite-codes", { auth: true });
     return data;

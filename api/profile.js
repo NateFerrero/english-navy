@@ -27,7 +27,10 @@ export default withErrors(async function handler(req, res) {
     const body = await readJsonBody(req);
     const profile = await updateProfile(user, {
       display_name: body.display_name,
+      first_name: body.first_name,
+      last_name: body.last_name,
       bio: body.bio,
+      default_timezone: body.default_timezone,
     });
     return sendJson(res, 200, { user: publicUser(user), profile });
   }

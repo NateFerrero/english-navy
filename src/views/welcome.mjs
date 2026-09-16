@@ -1,7 +1,7 @@
 import { el, clear, crest, icon } from "../ui.mjs";
 import { page } from "../layout.mjs";
 import { navigate } from "../router.mjs";
-import { getSessionEmail } from "../session.mjs";
+import { consumeJustSignedUp, getSessionEmail } from "../session.mjs";
 import { getApi } from "../api/index.mjs";
 
 async function copyText(value) {
@@ -31,10 +31,23 @@ export function renderWelcome(outlet) {
   const crestNode = crest(96);
   crestNode.classList.add("crest-lg");
   const invitePanel = renderInvitePanel();
+  const justSignedUp = consumeJustSignedUp();
+
+  const signupAlert = justSignedUp
+    ? el("div", { class: "alert alert-ok alert-dismissible" }, [
+        el("span", { text: "Account created. Welcome aboard!" }),
+        el("button", {
+          class: "alert-dismiss",
+          type: "button",
+          "aria-label": "Dismiss notification",
+          onclick: (event) => event.currentTarget.closest(".alert")?.remove(),
+        }, [icon("x", 18)]),
+      ])
+    : null;
 
   const card = el("div", { class: "card welcome" }, [
     crestNode,
-    el("div", { class: "alert alert-ok", text: "Account created. Welcome aboard!" }),
+    signupAlert,
     el("h2", { text: "Ahoy, sailor!" }),
     el("p", { class: "muted" }, ["You are enlisted as ", el("strong", { text: email }), "."]),
     invitePanel,

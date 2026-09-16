@@ -2,7 +2,7 @@ import { el, clear, isValidEmail } from "../ui.mjs";
 import { page } from "../layout.mjs";
 import { navigate } from "../router.mjs";
 import { getApi } from "../api/index.mjs";
-import { setSessionEmail } from "../session.mjs";
+import { markJustSignedUp, setSessionEmail } from "../session.mjs";
 
 export function renderSignup(outlet) {
   const inviteCodeError = el("div", { class: "error" });
@@ -91,6 +91,7 @@ export function renderSignup(outlet) {
       });
       // Persist just enough to greet the user on the welcome screen.
       setSessionEmail(user.email);
+      markJustSignedUp();
       navigate("/welcome");
     } catch (err) {
       setAlert("error", err.message || "Sign up failed. Please try again.");
