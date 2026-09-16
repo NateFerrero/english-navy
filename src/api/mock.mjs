@@ -4,6 +4,8 @@
 // artificial delay so the UI exercises its loading/async states. No network,
 // no external dependencies.
 
+import { clearSession, TOKEN_KEY } from "../session.mjs";
+
 const USERS_KEY = "mock:users";
 
 function delay(ms) {
@@ -20,6 +22,10 @@ function loadUsers() {
 
 function saveUsers(users) {
   sessionStorage.setItem(USERS_KEY, JSON.stringify(users));
+}
+
+function publicUser(user) {
+  return { id: user.id, email: user.email, createdAt: user.createdAt };
 }
 
 // Not cryptographic — this is a front-end-only mock. Never do this for real.
@@ -55,12 +61,52 @@ export const mockApi = {
     };
     users.push(user);
     saveUsers(users);
+    sessionStorage.setItem(TOKEN_KEY, `mock:${user.id}`);
 
-    return { id: user.id, email: user.email, createdAt: user.createdAt };
+    return publicUser(user);
+  },
+
+  async logIn({ email, password }) {
+    await delay(300);
+
+    const normalized = String(email).trim().toLowerCase();
+    const passwordHash = fauxHash(password);
+    const user = loadUsers().find(
+      (user) => user.email === normalized && user.passwordHash === passwordHash
+    );
+
+    if (!user) {
+      const err = new Error("Email or password is incorrect.");
+      err.code = "INVALID_CREDENTIALS";
+      throw err;
+    }
+
+    sessionStorage.setItem(TOKEN_KEY, `mock:${user.id}`);
+    return publicUser(user);
+  },
+
+  async me() {
+    await delay(100);
+
+    const token = sessionStorage.getItem(TOKEN_KEY);
+    const id = token?.startsWith("mock:") ? token.slice("mock:".length) : "";
+    const user = loadUsers().find((user) => user.id === id);
+
+    if (!user) {
+      const err = new Error("Please sign in to continue.");
+      err.code = "UNAUTHENTICATED";
+      throw err;
+    }
+
+    return publicUser(user);
   },
 
   async listUsers() {
     await delay(100);
-    return loadUsers().map((u) => ({ id: u.id, email: u.email }));
+    return loadUsers().map(publicUser);
+  },
+
+  logOut() {
+    clearSession();
   },
 };

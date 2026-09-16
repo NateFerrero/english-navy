@@ -108,6 +108,16 @@ body {
   color: var(--ink);
 }
 
+.nav-user {
+  color: var(--paper);
+  font-size: 0.88rem;
+  font-weight: 700;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .badge-mock {
   font-size: 0.72rem;
   font-weight: 700;
@@ -141,6 +151,18 @@ main {
   color: var(--navy-2);
   max-width: 640px;
   margin: 0 auto 24px;
+}
+
+.hero-actions,
+.account-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.account-home {
+  text-align: center;
 }
 
 .card {

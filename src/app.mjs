@@ -3,6 +3,7 @@
 import { registerRoute, setNotFound, startRouter } from "./router.mjs";
 import { syncApiFromUrl } from "./api/index.mjs";
 import { renderHome } from "./views/home.mjs";
+import { renderSignin } from "./views/signin.mjs";
 import { renderSignup } from "./views/signup.mjs";
 import { renderWelcome } from "./views/welcome.mjs";
 import { renderNotFound } from "./views/notfound.mjs";
@@ -12,6 +13,7 @@ import { renderNotFound } from "./views/notfound.mjs";
 syncApiFromUrl();
 
 registerRoute("/", renderHome);
+registerRoute("/signin", renderSignin);
 registerRoute("/signup", renderSignup);
 registerRoute("/welcome", renderWelcome);
 setNotFound(renderNotFound);
