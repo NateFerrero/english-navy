@@ -11,17 +11,54 @@ import {
   checkRateLimit,
 } from "../lib/http.mjs";
 import { requireUser } from "../lib/session.mjs";
-import { getProfile, updateProfile } from "../lib/userdb.mjs";
+import {
+  getPageRanks,
+  getProfile,
+  incrementPageRank,
+  resetPageRanks,
+  updateProfile,
+} from "../lib/userdb.mjs";
 import { publicUser, recordActivityLog } from "../lib/primary.mjs";
+
+const PAGE_RANK_PATHS = new Set(["/", "/profile", "/settings", "/log"]);
+
+function pageRankAction(req) {
+  const url = new URL(req.url || "/api/profile", "http://localhost");
+  return url.searchParams.get("pageRank");
+}
 
 export default withErrors(async function handler(req, res) {
   if (handlePreflight(req, res)) return;
 
   const user = await requireUser(req);
+  const action = pageRankAction(req);
 
   if (req.method === "GET") {
+    if (action === "list") {
+      const ranks = await getPageRanks(user);
+      return sendJson(res, 200, { ranks });
+    }
     const profile = await getProfile(user);
     return sendJson(res, 200, { user: publicUser(user), profile });
+  }
+
+  if (req.method === "POST" && action) {
+    checkRateLimit(req, "page-rank", { limit: 240, windowMs: 15 * 60 * 1000 });
+
+    if (action === "record") {
+      const body = await readJsonBody(req);
+      const path = String(body.path || "");
+      if (!PAGE_RANK_PATHS.has(path)) {
+        return sendJson(res, 400, { error: "Unknown page rank path.", code: "INVALID_PAGE_RANK_PATH" });
+      }
+      const ranks = await incrementPageRank(user, path);
+      return sendJson(res, 200, { ranks });
+    }
+
+    if (action === "reset") {
+      const ranks = await resetPageRanks(user);
+      return sendJson(res, 200, { ranks });
+    }
   }
 
   if (req.method === "PUT") {
@@ -45,5 +82,5 @@ export default withErrors(async function handler(req, res) {
     return sendJson(res, 200, { user: publicUser(user), profile });
   }
 
-  return methodNotAllowed(res, ["GET", "PUT"]);
+  return methodNotAllowed(res, ["GET", "POST", "PUT"]);
 });

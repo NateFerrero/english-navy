@@ -12,6 +12,7 @@ const LOG_KEY = "mock:activity-log";
 const MAX_INVITE_CODES_PER_USER = 100;
 const DEMO_INVITE_CODE = "DEMO-CODE-0001";
 const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const PAGE_RANK_PATHS = new Set(["/", "/profile", "/settings", "/log"]);
 const DEFAULT_PROFILE = {
   display_name: "",
   first_name: "",
@@ -42,6 +43,10 @@ function publicUser(user) {
 
 function publicProfile(user) {
   return { ...DEFAULT_PROFILE, display_name: user.email.split("@")[0], ...(user.profile || {}) };
+}
+
+function publicPageRanks(user) {
+  return { ...(user.preferences?.pageRanks || {}) };
 }
 
 function normalizeInviteCode(code) {
@@ -257,6 +262,51 @@ export const mockApi = {
       },
     });
     return { user: publicUser(user), profile };
+  },
+
+  async listPageRanks() {
+    await delay(100);
+    const user = requireCurrentUser();
+    return { ranks: publicPageRanks(user) };
+  },
+
+  async recordPageVisit(path) {
+    await delay(80);
+    if (!PAGE_RANK_PATHS.has(path)) {
+      const err = new Error("Unknown page rank path.");
+      err.code = "INVALID_PAGE_RANK_PATH";
+      throw err;
+    }
+
+    const users = loadUsers();
+    const user = users.find((item) => item.id === currentUserId());
+    if (!user) {
+      const err = new Error("Please sign in to continue.");
+      err.code = "UNAUTHENTICATED";
+      throw err;
+    }
+
+    user.preferences = user.preferences || {};
+    user.preferences.pageRanks = user.preferences.pageRanks || {};
+    user.preferences.pageRanks[path] = Number(user.preferences.pageRanks[path] || 0) + 1;
+    saveUsers(users);
+    return { ranks: publicPageRanks(user) };
+  },
+
+  async resetPageRanks() {
+    await delay(100);
+    const users = loadUsers();
+    const user = users.find((item) => item.id === currentUserId());
+    if (!user) {
+      const err = new Error("Please sign in to continue.");
+      err.code = "UNAUTHENTICATED";
+      throw err;
+    }
+
+    user.preferences = user.preferences || {};
+    user.preferences.pageRanks = {};
+    saveUsers(users);
+    return { ranks: {} };
   },
 
   async changePassword({ currentPassword, newPassword }) {

@@ -73,6 +73,9 @@ export function icon(name, size = 20) {
     x: `
       <path d="M18 6 6 18M6 6l12 12"/>
     `,
+    "caret-down": `
+      <path d="m6 9 6 6 6-6"/>
+    `,
   };
 
   const wrap = document.createElement("span");
