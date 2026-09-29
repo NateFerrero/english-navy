@@ -19,6 +19,7 @@ The English Navy — a small web app for user sign-up.
   `api = "mock"` in `sessionStorage`, so the mock stays active across navigation
   and reloads for the whole session.
 - **Sign up** with an invite code, email address, and password.
+  When no users exist, the invite code `0000-0000-0000` creates the initial account.
 
 ## Run it
 
@@ -89,7 +90,7 @@ Routes:
 | Method | Route          | Purpose                                             |
 | ------ | -------------- | --------------------------------------------------- |
 | GET    | `/api/health`  | Liveness + active DB provider                       |
-| POST   | `/api/signup`       | Redeem invite code + create account + provision the user's own database |
+| POST   | `/api/signup`       | Redeem invite code + create account + provision the user's own database. When no users exist, `0000-0000-0000` bootstraps the first account. |
 | POST   | `/api/login`        | Authenticate and set an HttpOnly session cookie                       |
 | GET    | `/api/me`           | Current account                                                       |
 | DELETE | `/api/me`           | Clear the session cookie                                              |

@@ -8,6 +8,9 @@ dist/
 # Vercel
 .vercel/
 
+# Idea
+.idea/
+
 # Env
 .env
 .env.*
