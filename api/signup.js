@@ -87,7 +87,7 @@ export default withErrors(async function handler(req, res) {
 
     // 2) Store the account + the connection to its secondary DB in the primary DB.
     try {
-      if (!invite.created_by_user_id && (await countUsers()) > 0) {
+      if (!invite.created_by_user_id && (await countUsers()) !== 0) {
         throw httpError(400, "Enter a valid unused invite code.", "INVALID_INVITE_CODE");
       }
       await insertUser(user);
