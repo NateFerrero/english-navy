@@ -13,6 +13,7 @@ import { hashPassword, signToken } from "../lib/auth.mjs";
 import {
   ensurePrimarySchema,
   addContactForUser,
+  countUsers,
   findUserByEmail,
   insertUser,
   publicUser,
@@ -86,6 +87,9 @@ export default withErrors(async function handler(req, res) {
 
     // 2) Store the account + the connection to its secondary DB in the primary DB.
     try {
+      if (!invite.created_by_user_id && (await countUsers()) !== 0) {
+        throw httpError(400, "Enter a valid unused invite code.", "INVALID_INVITE_CODE");
+      }
       await insertUser(user);
       userInserted = true;
     } catch (err) {
@@ -95,14 +99,16 @@ export default withErrors(async function handler(req, res) {
 
     // 3) Initialize the secondary database schema for this user.
     await seedUserDatabase(user);
-    await addContactForUser(invite.created_by_user_id, email, "invite_code");
-    await recordActivityLog({
-      ownerUserId: invite.created_by_user_id,
-      actorUserId: id,
-      eventType: "invitation_accepted",
-      inviteCode,
-      metadata: { invitedEmail: email },
-    });
+    if (invite.created_by_user_id) {
+      await addContactForUser(invite.created_by_user_id, email, "invite_code");
+      await recordActivityLog({
+        ownerUserId: invite.created_by_user_id,
+        actorUserId: id,
+        eventType: "invitation_accepted",
+        inviteCode,
+        metadata: { invitedEmail: email },
+      });
+    }
   } catch (err) {
     if (!userInserted) await releaseInviteCodeReservation(inviteCode, id);
     throw err;

@@ -17,6 +17,7 @@ const MESSAGE_INVITATIONS_KEY = "mock:message-invitations";
 const MESSAGES_KEY = "mock:messages";
 const MAX_INVITE_CODES_PER_USER = 100;
 const DEMO_INVITE_CODE = "DEMO-CODE-0001";
+const BOOTSTRAP_INVITE_CODE = "0000-0000-0000";
 const INVITE_CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const PAGE_RANK_PATHS = new Set(["/", "/profile", "/settings", "/log", "/realms", "/contacts", "/messages"]);
 const DEFAULT_PROFILE = {
@@ -351,9 +352,12 @@ export const mockApi = {
       throw err;
     }
 
-    const invite = inviteCodes.find(
-      (item) => item.code === normalizedInviteCode && !item.claimedByUserId
-    );
+    const isBootstrapInvite = normalizedInviteCode === BOOTSTRAP_INVITE_CODE && users.length === 0;
+    const invite = isBootstrapInvite
+      ? { createdByUserId: null }
+      : inviteCodes.find(
+          (item) => item.code === normalizedInviteCode && !item.claimedByUserId
+        );
     if (!invite) {
       const err = new Error("Enter a valid unused invite code.");
       err.code = "INVALID_INVITE_CODE";
@@ -365,23 +369,27 @@ export const mockApi = {
       email: normalized,
       passwordHash: fauxHash(password),
       createdAt: new Date().toISOString(),
-      invitedByUserId: invite.createdByUserId,
+      invitedByUserId: invite.createdByUserId || null,
       profile: { ...DEFAULT_PROFILE, display_name: normalized.split("@")[0] },
     };
-    invite.claimedByUserId = user.id;
-    invite.claimedAt = new Date().toISOString();
+    if (!isBootstrapInvite) {
+      invite.claimedByUserId = user.id;
+      invite.claimedAt = new Date().toISOString();
+      saveInviteCodes(inviteCodes);
+    }
     users.push(user);
     saveUsers(users);
-    saveInviteCodes(inviteCodes);
     sessionStorage.setItem(TOKEN_KEY, `mock:${user.id}`);
-    addContact({ ownerUserId: invite.createdByUserId, email: normalized, source: "invite_code" });
-    recordLogEntry({
-      ownerUserId: invite.createdByUserId,
-      actorUserId: user.id,
-      type: "invitation_accepted",
-      inviteCode: normalizedInviteCode,
-      metadata: { invitedEmail: normalized },
-    });
+    if (invite.createdByUserId) {
+      addContact({ ownerUserId: invite.createdByUserId, email: normalized, source: "invite_code" });
+      recordLogEntry({
+        ownerUserId: invite.createdByUserId,
+        actorUserId: user.id,
+        type: "invitation_accepted",
+        inviteCode: normalizedInviteCode,
+        metadata: { invitedEmail: normalized },
+      });
+    }
 
     return publicUser(user);
   },
