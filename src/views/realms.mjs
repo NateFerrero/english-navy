@@ -73,7 +73,13 @@ export function renderRealms(outlet) {
       submit.disabled = true;
       submit.textContent = "Creating...";
       try {
-        await getApi().createRealm({ title, description: descriptionInput.value.trim() });
+        const data = await getApi().createRealm({ title, description: descriptionInput.value.trim() });
+        if (data?.realm) {
+          state.realms = [data.realm, ...state.realms.filter((item) => item.id !== data.realm.id)];
+          state.success = "Realm created.";
+          state.error = "";
+          render();
+        }
         await reload("Realm created.");
       } catch (err) {
         state.error = err.message || "Could not create the Realm.";

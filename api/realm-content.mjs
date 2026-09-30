@@ -195,5 +195,19 @@ export default withErrors(async function handler(req, res) {
   }
 
   if (result?.error) throwMapped(result.error);
+
+  const samActions = new Set(["addArgument", "startBranch", "reply", "proposeResolution", "agreeResolution"]);
+  if (samActions.has(action)) {
+    const definitionId = result.definitionId || body.definitionId || params.definitionId;
+    if (definitionId) {
+      result = await getDefinition(opened.db, {
+        definitionId,
+        userId: user.id,
+        realmId: params.realmId,
+      });
+      if (result.error) throwMapped(result.error);
+    }
+  }
+
   return sendJson(res, 201, { realm, ...result });
 });

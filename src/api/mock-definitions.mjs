@@ -135,6 +135,56 @@ export function createMockDefinitionApi({ delay, requireCurrentUser, loadUsers, 
     return { realm, ...extra };
   }
 
+  function definitionPayload(realmId, definitionId, user) {
+    const { realm, raw } = requireRealm(user, realmId);
+    const definition = load(DEFINITIONS_KEY).find((item) => item.id === definitionId);
+    if (!definition) fail("Definition not found.", "DEFINITION_NOT_FOUND");
+    const word = wordOrThrow(definition.wordId);
+    const bundle = decorateWord(word, user.id);
+    const now = new Date();
+    const users = loadUsers();
+    const live = load(MESSAGES_KEY).filter((item) => item.definitionId === definitionId && !item.collapsed);
+    const messages = live.map((item) => {
+      const author = users.find((row) => row.id === item.authorUserId);
+      return {
+        ...item,
+        authorEmail: author?.email || null,
+        authorName: author ? actorLabel(author) : "Unknown",
+        isSideThreadRoot: Boolean(item.threadId && item.threadId === item.id),
+      };
+    });
+    const resolutions = {};
+    for (const threadId of new Set(live.map((item) => item.threadId).filter(Boolean))) {
+      const resolution = load(RESOLUTIONS_KEY).find((item) => item.threadId === threadId) || {
+        threadId,
+        status: "none",
+        consensusBody: "",
+        agreements: [],
+      };
+      const participantIds = [...new Set(live.filter((item) => item.threadId === threadId).map((item) => item.authorUserId))];
+      const activeIds = participantIds.filter((id) => {
+        const row = users.find((item) => item.id === id);
+        return row && raw.members.some((member) => member.userId === id) && isActive(row, now);
+      });
+      const agreements = load(AGREEMENTS_KEY).filter((item) => item.threadId === threadId);
+      const agreedIds = new Set(agreements.filter((item) => item.agreed).map((item) => item.userId));
+      resolutions[threadId] = {
+        ...resolution,
+        agreements,
+        participantIds,
+        activeIds,
+        missingIds: activeIds.filter((id) => !agreedIds.has(id)),
+        canResolve: activeIds.includes(user.id),
+      };
+    }
+    return publicRealmPayload(realm, {
+      ...bundle,
+      definition: bundle.definitions.find((item) => item.id === definitionId),
+      messages,
+      resolutions,
+    });
+  }
+
   return {
     async markNotificationsRead({ ids = [] } = {}) {
       await delay(60);
@@ -178,53 +228,7 @@ export function createMockDefinitionApi({ delay, requireCurrentUser, loadUsers, 
       await delay(120);
       const user = requireCurrentUser();
       touch(user);
-      const { realm, raw } = requireRealm(user, realmId);
-      const definition = load(DEFINITIONS_KEY).find((item) => item.id === definitionId);
-      if (!definition) fail("Definition not found.", "DEFINITION_NOT_FOUND");
-      const word = wordOrThrow(definition.wordId);
-      const bundle = decorateWord(word, user.id);
-      const now = new Date();
-      const users = loadUsers();
-      const live = load(MESSAGES_KEY).filter((item) => item.definitionId === definitionId && !item.collapsed);
-      const messages = live.map((item) => {
-        const author = users.find((row) => row.id === item.authorUserId);
-        return {
-          ...item,
-          authorEmail: author?.email || null,
-          authorName: author ? actorLabel(author) : "Unknown",
-          isSideThreadRoot: Boolean(item.threadId && item.threadId === item.id),
-        };
-      });
-      const resolutions = {};
-      for (const threadId of new Set(live.map((item) => item.threadId).filter(Boolean))) {
-        const resolution = load(RESOLUTIONS_KEY).find((item) => item.threadId === threadId) || {
-          threadId,
-          status: "none",
-          consensusBody: "",
-          agreements: [],
-        };
-        const participantIds = [...new Set(live.filter((item) => item.threadId === threadId).map((item) => item.authorUserId))];
-        const activeIds = participantIds.filter((id) => {
-          const row = users.find((item) => item.id === id);
-          return row && raw.members.some((member) => member.userId === id) && isActive(row, now);
-        });
-        const agreements = load(AGREEMENTS_KEY).filter((item) => item.threadId === threadId);
-        const agreedIds = new Set(agreements.filter((item) => item.agreed).map((item) => item.userId));
-        resolutions[threadId] = {
-          ...resolution,
-          agreements,
-          participantIds,
-          activeIds,
-          missingIds: activeIds.filter((id) => !agreedIds.has(id)),
-          canResolve: activeIds.includes(user.id),
-        };
-      }
-      return publicRealmPayload(realm, {
-        ...bundle,
-        definition: bundle.definitions.find((item) => item.id === definitionId),
-        messages,
-        resolutions,
-      });
+      return definitionPayload(realmId, definitionId, user);
     },
 
     async listWordHistory({ realmId, wordId }) {
@@ -425,7 +429,7 @@ export function createMockDefinitionApi({ delay, requireCurrentUser, loadUsers, 
         createdAt: new Date().toISOString(),
       });
       save(MESSAGES_KEY, messages);
-      return { id };
+      return definitionPayload(realmId, definitionId, user);
     },
 
     async startBranch({ realmId, parentId, body }) {
@@ -450,7 +454,7 @@ export function createMockDefinitionApi({ delay, requireCurrentUser, loadUsers, 
         createdAt: new Date().toISOString(),
       });
       save(MESSAGES_KEY, messages);
-      return { id, threadId: id };
+      return definitionPayload(realmId, parent.definitionId, user);
     },
 
     async replyInThread({ realmId, parentId, body }) {
@@ -476,7 +480,7 @@ export function createMockDefinitionApi({ delay, requireCurrentUser, loadUsers, 
         createdAt: new Date().toISOString(),
       });
       save(MESSAGES_KEY, messages);
-      return { id, threadId: parent.threadId };
+      return definitionPayload(realmId, parent.definitionId, user);
     },
 
     async proposeResolution({ realmId, threadId, body }) {
@@ -486,7 +490,8 @@ export function createMockDefinitionApi({ delay, requireCurrentUser, loadUsers, 
       const cleanBody = String(body || "").trim();
       if (!cleanBody) fail("Message cannot be empty.", "EMPTY_MESSAGE");
       collapseIfReady({ user, realmId, raw, threadId, replace: { proposedByUserId: user.id, consensusBody: cleanBody, status: "pending" } });
-      return { ok: true };
+      const root = load(MESSAGES_KEY).find((item) => item.id === threadId);
+      return definitionPayload(realmId, root?.definitionId, user);
     },
 
     async agreeResolution({ realmId, threadId }) {
@@ -494,7 +499,8 @@ export function createMockDefinitionApi({ delay, requireCurrentUser, loadUsers, 
       const user = requireCurrentUser();
       const { raw } = requireRealm(user, realmId);
       collapseIfReady({ user, realmId, raw, threadId, agree: true });
-      return { ok: true };
+      const root = load(MESSAGES_KEY).find((item) => item.id === threadId);
+      return definitionPayload(realmId, root?.definitionId, user);
     },
   };
 

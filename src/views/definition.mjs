@@ -3,7 +3,7 @@ import { page } from "../layout.mjs";
 import { navigate } from "../router.mjs";
 import { getApi } from "../api/index.mjs";
 import { getSessionEmail } from "../session.mjs";
-import { breadcrumb, definitionCard, setAlert, wordTitle } from "./realm-ui.mjs";
+import { breadcrumb, definitionCard, formatUtc, setAlert, wordTitle } from "./realm-ui.mjs";
 
 export function renderDefinition(outlet, params = {}) {
   const email = getSessionEmail();
@@ -46,10 +46,24 @@ export function renderDefinition(outlet, params = {}) {
     render();
   }
 
+  function applyDefinition(data, message = "") {
+    if (!data?.definition && !Array.isArray(data?.messages)) return false;
+    if (data.realm) state.realm = data.realm;
+    if (data.word) state.word = data.word;
+    if (data.definition) state.definition = data.definition;
+    if (data.myPickId !== undefined) state.myPickId = data.myPickId;
+    if (Array.isArray(data.messages)) state.messages = data.messages;
+    if (data.resolutions) state.resolutions = data.resolutions;
+    state.success = message;
+    state.error = "";
+    render();
+    return true;
+  }
+
   async function run(fn, ok) {
     try {
-      await fn();
-      await reload(ok);
+      const data = await fn();
+      if (!applyDefinition(data, ok)) await reload(ok);
     } catch (err) {
       state.error = err.message || "Could not save.";
       render();
@@ -70,7 +84,7 @@ export function renderDefinition(outlet, params = {}) {
         }
         onSubmit(input.value);
       },
-    }, [input, error, submit]);
+    }, [el("div", { class: "field" }, [input, error]), submit]);
   }
 
   function resolutionPanel(threadId) {
@@ -139,7 +153,7 @@ export function renderDefinition(outlet, params = {}) {
       message.kind === "consensus" ? el("span", { class: "pill", text: "Consensus" }) : null,
       el("strong", { text: message.authorName || message.authorEmail || "Unknown" }),
       el("p", { text: message.body }),
-      el("span", { class: "muted", text: message.createdAt }),
+      el("span", { class: "muted", text: formatUtc(message.createdAt) }),
       ...actions,
       message.isSideThreadRoot ? resolutionPanel(message.id) : null,
       threadChildren.length ? el("ul", { class: "sam-thread" }, threadChildren.map((item) => renderMessage(item, true))) : null,
@@ -159,35 +173,37 @@ export function renderDefinition(outlet, params = {}) {
     const mains = state.messages.filter((message) => !message.threadId);
     clear(body);
     body.append(
-      breadcrumb([
-        { href: "/realms", label: "Realms" },
-        { href: `/realms/${encodeURIComponent(realmId)}`, label: state.realm?.title || "Realm" },
-        { href: `/realms/${encodeURIComponent(realmId)}/words/${encodeURIComponent(wordId)}`, label: title },
-        { label: "Definition" },
-      ]),
-      el("h2", { text: title }),
-      alert,
-      state.definition
-        ? definitionCard(state.definition, {
-            realmId,
-            wordId,
-            picked: state.myPickId === state.definition.id,
-            onPick: () => run(() => getApi().pickDefinition({ realmId, wordId, definitionId }), "Pick updated."),
-            forkHref: `/realms/${encodeURIComponent(realmId)}/words/${encodeURIComponent(wordId)}?fork=${encodeURIComponent(definitionId)}`,
-          })
-        : null,
-      el("section", { class: "panel" }, [
-        el("h3", { text: "Structured Argument Map" }),
-        el("p", { class: "muted", text: "Main-thread arguments stay open. Side threads collapse into a single consensus message when every active participant agrees." }),
-        mains.length
-          ? el("ul", { class: "sam-thread" }, mains.map((message) => renderMessage(message)))
-          : el("p", { class: "muted", text: "No arguments yet." }),
-        composer({
-          placeholder: "Add a top-level argument",
-          submitLabel: "Add argument",
-          onSubmit: (value) => run(() => getApi().addArgument({ realmId, definitionId, body: value }), "Argument added."),
-        }),
-      ])
+      ...[
+        breadcrumb([
+          { href: "/realms", label: "Realms" },
+          { href: `/realms/${encodeURIComponent(realmId)}`, label: state.realm?.title || "Realm" },
+          { href: `/realms/${encodeURIComponent(realmId)}/words/${encodeURIComponent(wordId)}`, label: title },
+          { label: "Definition" },
+        ]),
+        el("h2", { text: title }),
+        alert,
+        state.definition
+          ? definitionCard(state.definition, {
+              realmId,
+              wordId,
+              picked: state.myPickId === state.definition.id,
+              onPick: () => run(() => getApi().pickDefinition({ realmId, wordId, definitionId }), "Pick updated."),
+              forkHref: `/realms/${encodeURIComponent(realmId)}/words/${encodeURIComponent(wordId)}?fork=${encodeURIComponent(definitionId)}`,
+            })
+          : null,
+        el("section", { class: "panel" }, [
+          el("h3", { text: "Structured Argument Map" }),
+          el("p", { class: "muted", text: "Main-thread arguments stay open. Side threads collapse into a single consensus message when every active participant agrees." }),
+          mains.length
+            ? el("ul", { class: "sam-thread" }, mains.map((message) => renderMessage(message)))
+            : el("p", { class: "muted", text: "No arguments yet." }),
+          composer({
+            placeholder: "Add a top-level argument",
+            submitLabel: "Add argument",
+            onSubmit: (value) => run(() => getApi().addArgument({ realmId, definitionId, body: value }), "Argument added."),
+          }),
+        ]),
+      ].filter(Boolean)
     );
   }
 

@@ -1,4 +1,4 @@
-const VERSION = "v2";
+const VERSION = "v3";
 const CACHE_NAME = `english-navy-${VERSION}`;
 
 // Keep this list intentionally small and stable; cache-on-demand fills in the rest.
@@ -71,6 +71,9 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (!isSameOrigin(url)) return;
+  // API responses must never be served from the PWA cache; list reloads after
+  // creating a realm, word, definition, pick, or side thread need fresh data.
+  if (url.pathname.startsWith("/api/")) return;
 
   if (request.mode === "navigate") {
     event.respondWith(

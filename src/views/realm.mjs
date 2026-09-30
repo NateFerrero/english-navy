@@ -65,12 +65,28 @@ export function renderRealm(outlet, params = {}) {
       submit.disabled = true;
       submit.textContent = "Saving...";
       try {
-        await getApi().createWord({
+        const data = await getApi().createWord({
           realmId,
           name,
           clarifier: clarifierInput.value.trim() || "General",
           definition,
         });
+        if (data?.word) {
+          const next = {
+            ...data.word,
+            currentDefinitions: data.currentDefinitions || [],
+            previewBody: data.currentDefinitions?.[0]?.body || "",
+            myPickId: data.myPickId,
+          };
+          state.words = [...state.words.filter((item) => item.id !== next.id), next].sort((a, b) => {
+            const nameCmp = String(a.name || "").localeCompare(String(b.name || ""));
+            if (nameCmp) return nameCmp;
+            return String(a.clarifier || "").localeCompare(String(b.clarifier || ""));
+          });
+          state.success = "Word added.";
+          state.error = "";
+          render();
+        }
         await reload("Word added.");
       } catch (err) {
         formError.textContent = err.message || "Could not add the word.";

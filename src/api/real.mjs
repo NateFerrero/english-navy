@@ -15,6 +15,7 @@ async function request(path, { method = "GET", body, auth = false } = {}) {
       method,
       headers,
       credentials: "same-origin",
+      cache: "no-store",
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
   } catch {

@@ -3,7 +3,7 @@ import { page } from "../layout.mjs";
 import { navigate } from "../router.mjs";
 import { getApi } from "../api/index.mjs";
 import { getSessionEmail } from "../session.mjs";
-import { breadcrumb, definitionCard, setAlert, wordTitle } from "./realm-ui.mjs";
+import { breadcrumb, definitionCard, formatUtc, setAlert, wordTitle } from "./realm-ui.mjs";
 
 function historyLabel(event) {
   if (event.eventType === "consensus_changed") return "Current definition changed";
@@ -62,10 +62,23 @@ export function renderWord(outlet, params = {}) {
     render();
   }
 
+  function applyWord(data, message = "") {
+    if (!data?.word) return false;
+    state.realm = data.realm || state.realm;
+    state.word = data.word;
+    state.currentDefinitions = data.currentDefinitions || [];
+    state.alternativeDefinitions = data.alternativeDefinitions || [];
+    state.myPickId = data.myPickId;
+    state.success = message;
+    state.error = "";
+    render();
+    return true;
+  }
+
   async function pick(definitionId) {
     try {
-      await getApi().pickDefinition({ realmId, wordId, definitionId });
-      await reload("Pick updated.");
+      const data = await getApi().pickDefinition({ realmId, wordId, definitionId });
+      if (!applyWord(data, "Pick updated.")) await reload("Pick updated.");
     } catch (err) {
       state.error = err.message || "Could not update your pick.";
       render();
@@ -98,8 +111,7 @@ export function renderWord(outlet, params = {}) {
     return el("form", { class: "stack-form panel", onsubmit: onSubmit }, [
       el("h3", { text: "Fork definition" }),
       el("p", { class: "muted", text: "Creates a new alternative under the same word." }),
-      input,
-      formError,
+      el("div", { class: "field" }, [input, formError]),
       submit,
     ]);
   }
@@ -116,8 +128,8 @@ export function renderWord(outlet, params = {}) {
       }
       submit.disabled = true;
       try {
-        await getApi().createDefinition({ realmId, wordId, body: input.value });
-        await reload("Definition added.");
+        const data = await getApi().createDefinition({ realmId, wordId, body: input.value });
+        if (!applyWord(data, "Definition added.")) await reload("Definition added.");
       } catch (err) {
         formError.textContent = err.message || "Could not add the definition.";
         submit.disabled = false;
@@ -125,8 +137,7 @@ export function renderWord(outlet, params = {}) {
     }
     return el("form", { class: "stack-form panel", onsubmit: onSubmit }, [
       el("h3", { text: "Propose another definition" }),
-      input,
-      formError,
+      el("div", { class: "field" }, [input, formError]),
       submit,
     ]);
   }
@@ -175,7 +186,10 @@ export function renderWord(outlet, params = {}) {
         return el("li", { class: "entity-row entity-row-stack" }, [
           el("div", {}, [
             el("strong", { text: historyLabel(event) }),
-            el("span", { class: "muted", text: `${event.actorName || event.actorEmail || "Someone"} · ${event.createdAt}` }),
+            el("span", {
+              class: "muted",
+              text: `${event.actorName || event.actorEmail || "Someone"} · ${formatUtc(event.createdAt)}`,
+            }),
           ]),
           view,
         ]);
@@ -229,12 +243,14 @@ export function renderWord(outlet, params = {}) {
 
     if (forkSource) body.append(forkForm(forkSource));
     body.append(
-      definitionList(
-        state.currentDefinitions.length > 1 ? "Current Definitions (tied)" : "Current Definition",
-        state.currentDefinitions
-      ),
-      definitionList("Alternative definitions", state.alternativeDefinitions),
-      proposeForm()
+      ...[
+        definitionList(
+          state.currentDefinitions.length > 1 ? "Current Definitions (tied)" : "Current Definition",
+          state.currentDefinitions
+        ),
+        definitionList("Alternative definitions", state.alternativeDefinitions),
+        proposeForm(),
+      ].filter(Boolean)
     );
   }
 

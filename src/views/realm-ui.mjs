@@ -16,6 +16,22 @@ export function wordTitle(word) {
   return `${word.name} (${word.clarifier})`;
 }
 
+export function formatUtc(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const formatted = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "UTC",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(date);
+  return `${formatted} UTC`;
+}
+
 export function breadcrumb(items) {
   return el(
     "nav",

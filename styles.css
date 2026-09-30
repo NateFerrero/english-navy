@@ -502,7 +502,9 @@ main {
 .field input,
 .field select,
 .field textarea,
-.inline-form input {
+.inline-form input,
+.stack-form input,
+.stack-form textarea {
   width: 100%;
   padding: 11px 12px;
   border: 1px solid var(--line);
@@ -516,12 +518,15 @@ main {
 .field input:focus,
 .field select:focus,
 .field textarea:focus,
-.inline-form input:focus {
+.inline-form input:focus,
+.stack-form input:focus,
+.stack-form textarea:focus {
   outline: 2px solid var(--brass);
   border-color: var(--brass);
 }
 
-.field textarea {
+.field textarea,
+.stack-form textarea {
   resize: vertical;
 }
 
@@ -941,6 +946,10 @@ main {
   display: grid;
   gap: 8px;
   padding-top: 12px;
+}
+
+.sam-message .stack-form {
+  margin-bottom: 12px;
 }
 
 .sam-nested {
