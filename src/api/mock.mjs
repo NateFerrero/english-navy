@@ -5,6 +5,7 @@
 // no external dependencies.
 
 import { clearSession, TOKEN_KEY } from "../session.mjs";
+import { createMockDefinitionApi, mockNoticesFor } from "./mock-definitions.mjs";
 
 const USERS_KEY = "mock:users";
 const INVITE_CODES_KEY = "mock:invite-codes";
@@ -924,7 +925,9 @@ export const mockApi = {
     const invitations = loadRealmInvitations()
       .filter((invitation) => invitation.inviteeUserId === user.id && invitation.status === "pending")
       .map(publicRealmInvitation);
-    return { invitations, count: invitations.length };
+    const notifications = mockNoticesFor(user.id);
+    const unread = notifications.filter((item) => !item.read).length;
+    return { invitations, notifications, count: invitations.length + unread };
   },
 
   async respondToRealmInvitation({ invitationId, response }) {
@@ -1072,3 +1075,14 @@ export const mockApi = {
     };
   },
 };
+
+Object.assign(
+  mockApi,
+  createMockDefinitionApi({
+    delay,
+    requireCurrentUser,
+    loadUsers,
+    loadRealms,
+    recordLogEntry,
+  })
+);

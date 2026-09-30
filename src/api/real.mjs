@@ -142,6 +142,118 @@ export const realApi = {
     });
   },
 
+  async markNotificationsRead({ ids = [] } = {}) {
+    return request("/api/realm-content?action=read-notifications", {
+      method: "POST",
+      auth: true,
+      body: { ids },
+    });
+  },
+
+  async listRealmWords({ realmId }) {
+    return request(`/api/realm-content?realmId=${encodeURIComponent(realmId)}`, { auth: true });
+  },
+
+  async getRealmWord({ realmId, wordId }) {
+    return request(
+      `/api/realm-content?realmId=${encodeURIComponent(realmId)}&wordId=${encodeURIComponent(wordId)}`,
+      { auth: true }
+    );
+  },
+
+  async getRealmDefinition({ realmId, definitionId }) {
+    return request(
+      `/api/realm-content?realmId=${encodeURIComponent(realmId)}&definitionId=${encodeURIComponent(definitionId)}`,
+      { auth: true }
+    );
+  },
+
+  async listWordHistory({ realmId, wordId }) {
+    return request(
+      `/api/realm-content?realmId=${encodeURIComponent(realmId)}&wordId=${encodeURIComponent(wordId)}&action=history`,
+      { auth: true }
+    );
+  },
+
+  async getHistoryEvent({ realmId, eventId }) {
+    return request(
+      `/api/realm-content?realmId=${encodeURIComponent(realmId)}&eventId=${encodeURIComponent(eventId)}&action=history`,
+      { auth: true }
+    );
+  },
+
+  async createWord({ realmId, name, clarifier, definition }) {
+    return request(`/api/realm-content?realmId=${encodeURIComponent(realmId)}&action=createWord`, {
+      method: "POST",
+      auth: true,
+      body: { name, clarifier, definition },
+    });
+  },
+
+  async createDefinition({ realmId, wordId, body }) {
+    return request(`/api/realm-content?realmId=${encodeURIComponent(realmId)}&action=createDefinition`, {
+      method: "POST",
+      auth: true,
+      body: { wordId, body },
+    });
+  },
+
+  async forkDefinition({ realmId, definitionId, body }) {
+    return request(`/api/realm-content?realmId=${encodeURIComponent(realmId)}&action=forkDefinition`, {
+      method: "POST",
+      auth: true,
+      body: { definitionId, body },
+    });
+  },
+
+  async pickDefinition({ realmId, wordId, definitionId }) {
+    return request(`/api/realm-content?realmId=${encodeURIComponent(realmId)}&action=pickDefinition`, {
+      method: "POST",
+      auth: true,
+      body: { wordId, definitionId },
+    });
+  },
+
+  async addArgument({ realmId, definitionId, body }) {
+    return request(`/api/realm-content?realmId=${encodeURIComponent(realmId)}&action=addArgument`, {
+      method: "POST",
+      auth: true,
+      body: { definitionId, body },
+    });
+  },
+
+  async startBranch({ realmId, parentId, body }) {
+    return request(`/api/realm-content?realmId=${encodeURIComponent(realmId)}&action=startBranch`, {
+      method: "POST",
+      auth: true,
+      body: { parentId, body },
+    });
+  },
+
+  async replyInThread({ realmId, parentId, body }) {
+    return request(`/api/realm-content?realmId=${encodeURIComponent(realmId)}&action=reply`, {
+      method: "POST",
+      auth: true,
+      body: { parentId, body },
+    });
+  },
+
+  async proposeResolution({ realmId, threadId, body }) {
+    return request(`/api/realm-content?realmId=${encodeURIComponent(realmId)}&action=proposeResolution`, {
+      method: "POST",
+      auth: true,
+      body: { threadId, body },
+    });
+  },
+
+  async agreeResolution({ realmId, threadId }) {
+    return request(`/api/realm-content?realmId=${encodeURIComponent(realmId)}&action=agreeResolution`, {
+      method: "POST",
+      auth: true,
+      body: { threadId },
+    });
+  },
+
   async changePassword({ currentPassword, newPassword }) {
     return request("/api/password", {
       method: "PUT",

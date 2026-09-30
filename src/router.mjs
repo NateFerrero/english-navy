@@ -8,11 +8,44 @@
 //   route still boots the app (SPA fallback).
 
 const routes = new Map();
+const paramRoutes = [];
 let notFoundHandler = null;
 let outlet = null;
 
+function compilePattern(pattern) {
+  const keys = [];
+  const regex = new RegExp(
+    `^${pattern
+      .split("/")
+      .map((segment) => {
+        if (segment.startsWith(":")) {
+          keys.push(segment.slice(1));
+          return "([^/]+)";
+        }
+        return segment.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      })
+      .join("/")}$`
+  );
+  return { regex, keys };
+}
+
 export function registerRoute(path, handler) {
   routes.set(path, handler);
+  if (path.includes(":")) paramRoutes.push({ ...compilePattern(path), handler });
+}
+
+function matchRoute(pathname) {
+  if (routes.has(pathname)) return { handler: routes.get(pathname), params: {} };
+  for (const route of paramRoutes) {
+    const match = pathname.match(route.regex);
+    if (!match) continue;
+    const params = {};
+    route.keys.forEach((key, index) => {
+      params[key] = decodeURIComponent(match[index + 1]);
+    });
+    return { handler: route.handler, params };
+  }
+  return { handler: notFoundHandler, params: {} };
 }
 
 export function setNotFound(handler) {
@@ -31,9 +64,9 @@ export function navigate(path, { replace = false } = {}) {
 
 function render() {
   const path = window.location.pathname;
-  const handler = routes.get(path) || notFoundHandler;
+  const { handler, params } = matchRoute(path);
   if (!handler || !outlet) return;
-  handler(outlet);
+  handler(outlet, params);
   window.scrollTo(0, 0);
 }
 
@@ -47,7 +80,10 @@ function onClick(event) {
   if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
 
   event.preventDefault();
-  if (href !== window.location.pathname) navigate(href);
+  const next = new URL(href, window.location.origin);
+  const current = `${window.location.pathname}${window.location.search}`;
+  const target = `${next.pathname}${next.search}`;
+  if (target !== current) navigate(href);
 }
 
 export function startRouter(rootNode) {

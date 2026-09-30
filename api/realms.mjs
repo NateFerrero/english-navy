@@ -22,7 +22,8 @@ import {
   respondToRealmInvitation,
 } from "../lib/primary.mjs";
 import { mintDatabaseToken, provisionRealmDatabase } from "../lib/provisioner.mjs";
-import { grantRealmAccess, seedRealmDatabase } from "../lib/userdb.mjs";
+import { countUnreadNotifications, grantRealmAccess, listUserNotifications, seedRealmDatabase } from "../lib/userdb.mjs";
+import { ensureRealmContentSchema } from "../lib/realmdb.mjs";
 
 const MAX_TITLE_LENGTH = 80;
 const MAX_DESCRIPTION_LENGTH = 500;
@@ -45,8 +46,16 @@ export default withErrors(async function handler(req, res) {
 
   if (req.method === "GET") {
     if (action === "notifications") {
-      const invitations = await listPendingRealmInvitations(user.id);
-      return sendJson(res, 200, { invitations, count: invitations.length });
+      const [invitations, notifications, unread] = await Promise.all([
+        listPendingRealmInvitations(user.id),
+        listUserNotifications(user, { limit: 40 }),
+        countUnreadNotifications(user),
+      ]);
+      return sendJson(res, 200, {
+        invitations,
+        notifications,
+        count: invitations.length + unread,
+      });
     }
 
     const [realms, inviteOptions, invitations] = await Promise.all([
@@ -79,6 +88,7 @@ export default withErrors(async function handler(req, res) {
 
     await insertRealm(realmRow);
     await seedRealmDatabase(connection, realmRow);
+    await ensureRealmContentSchema(connection);
     await grantRealmAccess(user, {
       realmId: id,
       dbUrl: connection.db_url,

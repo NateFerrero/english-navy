@@ -862,6 +862,116 @@ main {
   display: grid;
 }
 
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 12px;
+  font-size: 0.92rem;
+}
+
+.breadcrumb a {
+  color: var(--navy);
+}
+
+.breadcrumb-sep {
+  color: var(--navy-2);
+}
+
+.tab-bar {
+  display: flex;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.definition-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.definition-card {
+  background: var(--paper-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.definition-card.current {
+  border-color: var(--brass);
+}
+
+.definition-body {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.definition-meta {
+  display: flex;
+  gap: 12px;
+}
+
+.pill {
+  background: var(--code-bg);
+  border-radius: 999px;
+  color: var(--navy);
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  width: fit-content;
+}
+
+.readable-definition .definition-body {
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+.sam-thread {
+  display: grid;
+  gap: 12px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sam-message {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 8px;
+  padding-top: 12px;
+}
+
+.sam-nested {
+  margin-left: 16px;
+}
+
+.sam-side {
+  background: var(--paper);
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.sam-consensus {
+  border-color: var(--brass);
+}
+
+.resolution-panel {
+  display: grid;
+  gap: 8px;
+}
+
+.entity-row a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.entity-row a:hover strong {
+  text-decoration: underline;
+}
+
 .inline-form {
   align-items: start;
   display: grid;
