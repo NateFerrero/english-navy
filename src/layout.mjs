@@ -19,7 +19,8 @@ const RANKED_NAV_ITEMS = [
 let navResizeController = null;
 
 function navLink(href, label, attrs = {}) {
-  const active = window.location.pathname === href;
+  const path = window.location.pathname;
+  const active = path === href || (href !== "/" && path.startsWith(`${href}/`));
   const className = [attrs.class, active ? "active" : null].filter(Boolean).join(" ");
   return el("a", {
     href,
@@ -148,10 +149,16 @@ function renderRankedNav(container, ranks) {
   requestAnimationFrame(() => fitRankedNav(container));
 }
 
+function rankedPath(path) {
+  if (path.startsWith("/realms/")) return "/realms";
+  return path;
+}
+
 async function recordCurrentPageVisit(path, container) {
-  if (!RANKED_NAV_ITEMS.some((item) => item.href === path)) return;
+  const ranked = rankedPath(path);
+  if (!RANKED_NAV_ITEMS.some((item) => item.href === ranked)) return;
   try {
-    const data = await getApi().recordPageVisit?.(path);
+    const data = await getApi().recordPageVisit?.(ranked);
     cacheRanks(data?.ranks || {});
   } catch {
     // Navigation should keep working even if preference storage is unavailable.
@@ -211,6 +218,18 @@ function invitationSummary(invitation) {
   return `${title}${inviter}`;
 }
 
+function noticeHref(notice) {
+  const realmId = notice.realmId || notice.metadata?.realmId;
+  const wordId = notice.metadata?.wordId;
+  const definitionId = notice.metadata?.definitionId;
+  if (realmId && wordId && definitionId) {
+    return `/realms/${encodeURIComponent(realmId)}/words/${encodeURIComponent(wordId)}/definitions/${encodeURIComponent(definitionId)}`;
+  }
+  if (realmId && wordId) return `/realms/${encodeURIComponent(realmId)}/words/${encodeURIComponent(wordId)}`;
+  if (realmId) return `/realms/${encodeURIComponent(realmId)}`;
+  return "/realms";
+}
+
 function notificationsButton() {
   const menu = el("div", { class: "notifications-menu", role: "menu", hidden: "" });
   const badge = el("span", { class: "notifications-badge", hidden: "", text: "0" });
@@ -227,7 +246,7 @@ function notificationsButton() {
         button.setAttribute("aria-expanded", expanded ? "false" : "true");
         menu.hidden = expanded;
         if (!expanded) {
-          loadNotifications();
+          loadNotifications({ markRead: true });
           setTimeout(() => {
             document.addEventListener(
               "click",
@@ -250,57 +269,79 @@ function notificationsButton() {
       window.dispatchEvent(new CustomEvent("realm-invitations:changed"));
       await loadNotifications();
     } catch (err) {
-      renderMenu([], err.message || "Could not update the invitation.");
+      renderMenu([], [], err.message || "Could not update the invitation.");
     }
   }
 
-  function renderMenu(invitations, error = "") {
+  function renderMenu(invitations, notices = [], error = "") {
     clear(menu);
-    menu.append(el("h3", { text: "Realm invitations" }));
+    menu.append(el("h3", { text: "Notifications" }));
     if (error) {
       menu.append(el("p", { class: "notifications-error", text: error }));
       return;
     }
-    if (!invitations.length) {
-      menu.append(el("p", { class: "muted", text: "No pending invitations." }));
+    if (!invitations.length && !notices.length) {
+      menu.append(el("p", { class: "muted", text: "No notifications." }));
       return;
     }
-    menu.append(
-      el(
-        "ul",
-        { class: "notifications-list" },
-        invitations.map((invitation) =>
-          el("li", {}, [
-            el("strong", { text: invitationSummary(invitation) }),
-            invitation.realmDescription ? el("span", { text: invitation.realmDescription }) : null,
-            el("div", { class: "notification-actions" }, [
-              el("button", {
-                type: "button",
-                class: "btn btn-small btn-primary",
-                text: "Accept",
-                onclick: () => respond(invitation, "accept"),
-              }),
-              el("button", {
-                type: "button",
-                class: "btn btn-small btn-ghost",
-                text: "Decline",
-                onclick: () => respond(invitation, "decline"),
-              }),
-            ]),
-          ])
+    if (notices.length) {
+      menu.append(
+        el(
+          "ul",
+          { class: "notifications-list" },
+          notices.map((notice) =>
+            el("li", {}, [
+              el("a", { href: noticeHref(notice), "data-link": "" }, [el("strong", { text: notice.body })]),
+            ])
+          )
         )
-      )
-    );
+      );
+    }
+    if (invitations.length) {
+      menu.append(el("h3", { text: "Realm invitations" }));
+      menu.append(
+        el(
+          "ul",
+          { class: "notifications-list" },
+          invitations.map((invitation) =>
+            el("li", {}, [
+              el("strong", { text: invitationSummary(invitation) }),
+              invitation.realmDescription ? el("span", { text: invitation.realmDescription }) : null,
+              el("div", { class: "notification-actions" }, [
+                el("button", {
+                  type: "button",
+                  class: "btn btn-small btn-primary",
+                  text: "Accept",
+                  onclick: () => respond(invitation, "accept"),
+                }),
+                el("button", {
+                  type: "button",
+                  class: "btn btn-small btn-ghost",
+                  text: "Decline",
+                  onclick: () => respond(invitation, "decline"),
+                }),
+              ]),
+            ])
+          )
+        )
+      );
+    }
   }
 
-  async function loadNotifications() {
+  async function loadNotifications({ markRead = false } = {}) {
     try {
       const data = await getApi().listRealmNotifications();
-      const count = Number(data.count ?? data.invitations?.length ?? 0);
+      const invitations = data.invitations || [];
+      const notices = data.notifications || [];
+      const unreadNotices = notices.filter((item) => !item.read);
+      const count = Number(data.count ?? invitations.length + unreadNotices.length);
       badge.textContent = String(count);
       badge.hidden = count === 0;
       button.classList.toggle("has-notifications", count > 0);
-      renderMenu(data.invitations || []);
+      renderMenu(invitations, notices);
+      if (markRead && unreadNotices.length && getApi().markNotificationsRead) {
+        await getApi().markNotificationsRead({ ids: unreadNotices.map((item) => item.id) });
+      }
     } catch {
       badge.hidden = true;
       renderMenu([]);

@@ -8,6 +8,7 @@
     "build": "node build.mjs",
     "start": "node server.mjs",
     "dev": "node server.mjs",
+    "test": "node scripts/test-bootstrap-invite.mjs && node scripts/test-realm-definitions.mjs",
     "generate:icons": "node scripts/generate-icons.mjs"
   },
   "engines": {

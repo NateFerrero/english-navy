@@ -1,6 +1,6 @@
 # english-navy
 
-The English Navy — a small web app for user sign-up.
+The English Navy — a small web app for collaborative, consensus-based definitions.
 
 - **Front end**: no build step, no framework, and **zero external dependencies**.
   Plain ES modules (`.mjs`) loaded via `<script type="module">`, with pushState
@@ -58,9 +58,9 @@ src/                FRONT END (zero dependencies)
     index.mjs       Chooses mock vs real API (?api= -> sessionStorage)
     mock.mjs        In-browser mock backend (sessionStorage "database")
     real.mjs        Real client: fetches the /api backend
-  views/            home.mjs, signup.mjs, welcome.mjs, notfound.mjs
+  views/            home, realms, words, definitions, signup, welcome, notfound
 api/                BACKEND (Vercel serverless functions, ESM)
-  health.js  signup.js  login.js  me.js  profile.js
+  health.js  signup.js  login.js  me.js  profile.js  realms.mjs  realm-content.mjs
 lib/                BACKEND shared modules
   config.mjs        Env config + provider selection
   http.mjs          Request/response helpers (Node + Vercel compatible)
@@ -68,6 +68,7 @@ lib/                BACKEND shared modules
   db.mjs            libSQL client factories (primary + per-user)
   primary.mjs       Primary DB: users table + connection to secondary DBs
   userdb.mjs        Per-user secondary DB schema + profile access
+  realmdb.mjs       Realm words, picks, argument maps, and history
   provisioner.mjs   Creates each user's database (Turso API or local file)
   session.mjs       Resolve authenticated user from Bearer token
 ```
@@ -99,6 +100,10 @@ Routes:
 | POST   | `/api/profile?pageRank=record/reset` | Record or reset signed-in top-menu page ranks in the user's **secondary** database |
 | GET    | `/api/invite-codes` | List invite codes created by the current user                         |
 | POST   | `/api/invite-codes` | Create 1-100 invite codes, up to 100 total per user                   |
+| GET    | `/api/realm-content` | List words, a word with picks, a definition's argument map, or history |
+| POST   | `/api/realm-content` | Create words, fork/pick definitions, argue, and collapse side threads |
+
+Realms hold Word/Phrase objects distinguished by a `Clarifier` field (not a nested hierarchy). Users continuously pick the definition they agree with most; ties are shown together as the Current Definition. Each definition has a Structured Argument Map. Side threads collapse into a single consensus message when every **active** participant agrees. Inactive members drop out of that required pool after 30 days of system-level inactivity. There are no countdown timers or voting windows.
 
 ### Two-tier database architecture
 

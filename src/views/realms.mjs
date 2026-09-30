@@ -32,7 +32,7 @@ export function renderRealms(outlet) {
   const body = el("div", { class: "profile-card-body" });
   const card = el("div", { class: "card wide-card" }, [
     el("h2", { text: "Realms" }),
-    el("p", { class: "subtitle", text: "Create separate Realm databases and invite Contacts to join them." }),
+    el("p", { class: "subtitle", text: "Create Realms, invite Contacts, and define words by continuous consensus." }),
     body,
   ]);
 
@@ -73,7 +73,13 @@ export function renderRealms(outlet) {
       submit.disabled = true;
       submit.textContent = "Creating...";
       try {
-        await getApi().createRealm({ title, description: descriptionInput.value.trim() });
+        const data = await getApi().createRealm({ title, description: descriptionInput.value.trim() });
+        if (data?.realm) {
+          state.realms = [data.realm, ...state.realms.filter((item) => item.id !== data.realm.id)];
+          state.success = "Realm created.";
+          state.error = "";
+          render();
+        }
         await reload("Realm created.");
       } catch (err) {
         state.error = err.message || "Could not create the Realm.";
@@ -183,7 +189,9 @@ export function renderRealms(outlet) {
       state.realms.map((realm) =>
         el("li", { class: "entity-row entity-row-stack" }, [
           el("div", {}, [
-            el("strong", { text: realm.title }),
+            el("a", { href: `/realms/${encodeURIComponent(realm.id)}`, "data-link": "" }, [
+              el("strong", { text: realm.title }),
+            ]),
             realm.description ? el("span", { class: "muted", text: realm.description }) : null,
             el("span", {
               class: "muted",
